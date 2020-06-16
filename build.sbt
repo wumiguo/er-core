@@ -13,7 +13,7 @@ initialize := {
 
 val sparkVersion = "2.0.2"
 
-//unmanagedBase := baseDirectory.value / "custom_lib"
+unmanagedBase := baseDirectory.value / "custom_lib"
 
 
 libraryDependencies += "org.apache.spark" % "spark-core_2.11" % "2.1.0"
