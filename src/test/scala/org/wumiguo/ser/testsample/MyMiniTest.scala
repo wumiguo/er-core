@@ -1,4 +1,4 @@
-package org.wumiguo.ser.methods
+package org.wumiguo.ser.testsample
 
 import org.scalatest.FeatureSpec
 

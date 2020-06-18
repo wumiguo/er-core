@@ -1,9 +1,12 @@
-package org.wumiguo.ser.methods
+package org.wumiguo.ser.testsample
 
 import java.util.NoSuchElementException
 
 import org.scalatest.FlatSpec
 
+/**
+ * A sample for unit test / integration test
+ */
 class SetSpec extends FlatSpec {
 
   "An empty Set" should "have size 0" in {
