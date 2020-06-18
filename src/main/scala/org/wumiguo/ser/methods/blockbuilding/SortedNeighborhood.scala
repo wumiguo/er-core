@@ -2,16 +2,17 @@ package org.wumiguo.ser.methods.blockbuilding
 
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
+import org.slf4j.LoggerFactory
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking.removeBadWords
 import org.wumiguo.ser.methods.datastructure.{BlockAbstract, BlockClean, BlockDirty, KeyValue, Profile}
 
 /**
  * @author levinliu
- * Created on 2020/6/11
+ *         Created on 2020/6/11
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SortedNeighborhood {
-
+object SortedNeighborhood extends Serializable {
+  val log = LoggerFactory.getLogger(getClass.getName)
   class KeyPartitioner(override val numPartitions: Int) extends Partitioner {
     override def getPartition(key: Any): Int = {
       key.asInstanceOf[Int]
@@ -20,66 +21,62 @@ object SortedNeighborhood {
 
 
   /**
-    * Performs the token blocking
-    *
-    * @param profiles      input to profiles to create blocks
-    * @param separatorIDs  id to separate profiles from different dataset (Clean-Clean context), if it is Dirty put -1
-    * @param keysToExclude keys to exclude from the blocking process
-    * @return the blocks
-    */
-  def createBlocks(profiles: RDD[Profile], wSize: Int, separatorIDs: Array[Int] = Array.emptyIntArray, keysToExclude: Iterable[String] = Nil, removeStopWords: Boolean = false,
+   * Performs the token blocking
+   *
+   * @param profiles      input to profiles to create blocks
+   * @param separatorIDs  id to separate profiles from different dataset (Clean-Clean context), if it is Dirty put -1
+   * @param keysToExclude keys to exclude from the blocking process
+   * @return the blocks
+   */
+  def createBlocks(profiles: RDD[Profile], slidingWindows: Int, separatorIDs: Array[Int] = Array.emptyIntArray, keysToExclude: Iterable[String] = Nil, removeStopWords: Boolean = false,
                    createKeysFunctions: (Iterable[KeyValue], Iterable[String]) => Iterable[String] = BlockingKeysStrategies.createKeysFromProfileAttributes): RDD[BlockAbstract] = {
-    /* For each profile returns the list of his tokens, produces (profileID, [list of tokens]) */
+    //produces (profileID, [list of tokens])
     val tokensPerProfile = profiles.map(profile => (profile.id, createKeysFunctions(profile.attributes, keysToExclude).filter(_.trim.length > 0).toSet))
-    /* Associate each profile to each token, produces (tokenID, [list of profileID]) */
-    //val profilePerKey = tokensPerProfile.flatMap(BlockingUtils.associateKeysToProfileID).groupByKey().filter(_._2.size > 1)
-    val a = if (removeStopWords) {
+    //produces (tokenID, [list of profileID])
+    val tokenVsProfileIDPair = if (removeStopWords) {
       removeBadWords(tokensPerProfile.flatMap(BlockingUtils.associateKeysToProfileID))
     } else {
       tokensPerProfile.flatMap(BlockingUtils.associateKeysToProfileID)
     }
-
-
-    val sorted = a.sortByKey()
-
+    val sorted = tokenVsProfileIDPair.sortByKey()
+    log.info("sorted numofpart {}",sorted.getNumPartitions)
     val partialRes = sorted.mapPartitionsWithIndex { case (partID, partData) =>
-
       val pDataLst = partData.toList
-
-      //Genero i blocchi per questa partizione, però dovrò andare anche a fare quelli che mancano che sono in comune
-      //con le partizioni successive
-      val blocks = pDataLst.map(_._2).sliding(wSize)
-
-      //Se non è il primo devo prendere i primi W-1 elementi per passarli alla partizione precedente
+      log.info("partx " + partID + " pDataList " + pDataLst)
+      val blocks = pDataLst.map(_._2).sliding(slidingWindows)
+      log.info("blocks {}", blocks)
       val first = {
         if (partID != 0) {
-          (partID - 1, pDataLst.take(wSize - 1)) //Emetto gli elementi associati all'id della partizione che dovrà vederli
+          (partID - 1, pDataLst.take(slidingWindows - 1))
         }
         else {
           (partID, Nil)
         }
       }
-
-      //Se non è l'ultimo devo prendere gli ultimi W-1 elementi per passarli alla partizione successiva
       val last = {
         if (partID != sorted.getNumPartitions - 1) {
-          (partID, pDataLst.takeRight(wSize - 1)) //Emetto gli elementi associati all'id della partizione attuale
+          (partID, pDataLst.takeRight(slidingWindows - 1))
         }
         else {
           (partID, Nil)
         }
       }
+      //log.info("firstx is "+first+" last "+last+ " on part = " +partID + " header " + blocks.toList.head)
       List((blocks, first :: last :: Nil)).toIterator
     }
 
-    //Prima parte dei blocchi generati
     val b1 = partialRes.flatMap(_._1)
 
     val b2 = partialRes.flatMap(_._2).partitionBy(new KeyPartitioner(sorted.getNumPartitions)).mapPartitions { part =>
-      part.flatMap(_._2).toList.sortBy(_._1).map(_._2).sliding(wSize)
+      part.flatMap(_._2).toList.sortBy(_._1).map(_._2).sliding(slidingWindows)
     }
 
     val blocks = b1.union(b2)
+    //log.info("b1 size {}",b1.count())
+    //b1.foreach(x=>log.info("data001 "+x))
+    //log.info("b2 size {}",b2.count())
+    //log.info("blocks size {}",blocks.count())
+    //blocks.foreach(x=>log.info("data002 "+x))
 
     /* For each tokens divides the profiles in two lists according to the original datasets where they come (in case of Clean-Clean) */
     val profilesGrouped = blocks.map {
@@ -104,8 +101,7 @@ object SortedNeighborhood {
         else block.count(_.nonEmpty) > 1
 
     } zipWithIndex()
-
-    /* Map each row in an object BlockClean or BlockDirty */
+    // create CleanBlock, or DirtyBlock if separatorIDs provided
     profilesGroupedWithIds map {
       case (entityIds, blockId) =>
         if (separatorIDs.isEmpty)

@@ -1,11 +1,14 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  * Clean block: the profiles comes from two distinct datasets
-  *
-  * @author Giovanni Simononi
-  * @since 2016/12/07
-  */
+ * Clean block: the profiles comes from two distinct datasets
+ *
+ * @param blockID
+ * @param profiles
+ * @param entropy
+ * @param clusterID
+ * @param blockingKey
+ */
 case class BlockClean(blockID: Int, profiles: Array[Set[Int]], var entropy: Double = -1, var clusterID: Integer = -1, blockingKey: String = "") extends BlockAbstract with Serializable {
   override def getComparisonSize(): Double = {
     val a = profiles.filter(_.nonEmpty)

@@ -28,11 +28,10 @@ class SortedNeighborhoodTest
     val profileRaw = spark.sparkContext.textFile(rddTextFilePath)
     profileRaw.foreach(x => println("raw " + x))
     val fmtProfile = profileRaw.map(x => String2Profile.string2Profile(x))
-    val wSize = 3
-    val result = SortedNeighborhood.createBlocks(fmtProfile, wSize)
+    val winSize = 3
+    val result = SortedNeighborhood.createBlocks(fmtProfile, winSize)
     assert(result != null)
-    result.foreach(b=>println(b))
-    println(result)
+    result.foreach(b => println("result entry is " + b))
     println(result.id + " name " + result.name)
   }
 

@@ -21,12 +21,14 @@ trait SparkEnvSetup {
         sparkConf.setAppName(applicationName)
         sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
       }
+      log.info("spark session {}", sparkSession)
       sparkSession
     }
     catch {
       case e: Exception => throw new RuntimeException("Fail to initialize spark session", e)
     }
   }
+
   def createLocalSparkSession(applicationName: String, configPath: String = null): SparkSession = {
     try {
       if (sparkSession == null || sparkSession.sparkContext.isStopped) {

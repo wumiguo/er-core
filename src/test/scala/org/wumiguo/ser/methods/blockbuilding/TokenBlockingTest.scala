@@ -13,10 +13,19 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
   "remove back word " should " remove " in {
     val rdd = spark.sparkContext.parallelize(Seq(
       ("Hello, my team is bigdata", 1),
-      ("Hey, nice day", 2),
-      ("Testing code is nice", 3)))
+      ("Hey", 2),
+      ("_", 3),
+      ("Testing code is nice", 4),
+      ("and", 5),
+      ("BigData", 6),
+      ("IT", 7),
+      ("You", 8),
+      ("testing", 9),
+      ("I", 10)))
     var result = TokenBlocking.removeBadWords(rdd)
+    println("remove bad words complete")
     result.foreach(x => println("output is " + x))
+    assertResult(6)(result.count())
   }
 
 }

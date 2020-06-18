@@ -1,12 +1,22 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  * Clean block: the profiles comes from two distinct datasets
-  *
-  * @author Giovanni Simononi
-  * @since 2016/12/07
-  */
+ * Dirty Block //TODO
+ *
+ * @param blockID
+ * @param profiles
+ * @param entropy
+ * @param clusterID
+ * @param blockingKey
+ */
 case class BlockDirty(blockID: Int, profiles: Array[Set[Int]], var entropy: Double = -1, var clusterID: Integer = -1, blockingKey: String = "") extends BlockAbstract with Serializable {
+  override def toString():String={
+    "BlockDirty(blockId:" +blockID+
+      ",key=" + blockingKey +
+      ",profiles=" +profiles.toList +
+      ",ent="+entropy+",clusterId="+clusterID+")"
+  }
+
   override def getComparisonSize(): Double = {
     profiles.head.size.toDouble * (profiles.head.size.toDouble - 1)
   }
