@@ -27,5 +27,19 @@ trait SparkEnvSetup {
       case e: Exception => throw new RuntimeException("Fail to initialize spark session", e)
     }
   }
+  def createLocalSparkSession(applicationName: String, configPath: String = null): SparkSession = {
+    try {
+      if (sparkSession == null || sparkSession.sparkContext.isStopped) {
+        val sparkConf = new SparkConf()
+        sparkConf.setAppName(applicationName)
+        sparkConf.setMaster("local[*]")
+        sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
+      }
+      sparkSession
+    }
+    catch {
+      case e: Exception => throw new RuntimeException("Fail to initialize spark session", e)
+    }
+  }
 
 }
