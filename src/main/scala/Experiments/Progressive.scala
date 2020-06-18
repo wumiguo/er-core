@@ -214,18 +214,18 @@ object Progressive {
 
     ids.groupByKey().filter(_._2.size > 1).flatMap(x => x._2.toList.combinations(2)).map(x => x.mkString(",")).repartition(1).saveAsTextFile("C:/Users/gagli/Desktop/groundtruth")
 
-    ???
+//    ???
 
 
       x.repartition(1).write.option("header","true") .csv("C:/Users/gagli/Desktop/csvout.csv")
 
-    ???
+//    ???
 
     val a = sc.textFile("C:/Users/gagli/Desktop/matches.txt")
     val b = a.map(x => x.split(",")).filter(_.length > 1).zipWithIndex()
     b.flatMap(x => x._1.map(y => (x._2, y))).repartition(1).saveAsTextFile("C:/Users/gagli/Desktop/out.txt")
 
-    ???
+//    ???
 
     val log = LogManager.getRootLogger
     log.setLevel(Level.INFO)
