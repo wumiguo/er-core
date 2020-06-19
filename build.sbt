@@ -26,7 +26,7 @@ libraryDependencies += "org.apache.spark" % "spark-graphx_2.11" % sparkVersion
 
 libraryDependencies += "org.apache.spark" % "spark-mllib_2.11" % sparkVersion
 
-libraryDependencies += "org.apache.spark" % "spark-hive_2.11" % sparkVersion"
+libraryDependencies += "org.apache.spark" % "spark-hive_2.11" % sparkVersion
 
 // https://mvnrepository.com/artifact/com.twitter/algebird-core_2.11
 //libraryDependencies += "com.twitter" % "algebird-core_2.11" % "0.12.3"
