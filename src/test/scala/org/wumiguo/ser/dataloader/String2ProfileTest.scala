@@ -17,6 +17,6 @@ class String2ProfileTest extends FunSuite {
     assertResult(22)(p.sourceId)
     assertResult(4)(p.attributes.size)
     val first = p.attributes.sortBy(_.key)
-    assertResult(KeyValue("id","304586"))(first)
+    assertResult(KeyValue("author","Gottfried vossen, Mathias Weske"))(first.head)
   }
 }
