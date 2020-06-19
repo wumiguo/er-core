@@ -10,7 +10,7 @@ import org.wumiguo.ser.common.SparkEnvSetup
  */
 class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(this.getClass.getName)
-  "remove back word " should " remove " in {
+  it should " remove black word " in {
     val rdd = spark.sparkContext.parallelize(Seq(
       ("Hello, my team is bigdata", 1),
       ("Hey", 2),
@@ -26,6 +26,21 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     println("remove bad words complete")
     result.foreach(x => println("output is " + x))
     assertResult(6)(result.count())
+  }
+
+  it should "create blocks" in {
+    val rdd = spark.sparkContext.parallelize(Seq(
+      ("Hello, my team is bigdata", 1),
+      ("Hey", 2),
+      ("_", 3),
+      ("Testing code is nice", 4),
+      ("and", 5),
+      ("BigData", 6),
+      ("IT", 7),
+      ("You", 8),
+      ("testing", 9),
+      ("I", 10)))
+    TokenBlocking.createBlocks(rdd)
   }
 
 }
