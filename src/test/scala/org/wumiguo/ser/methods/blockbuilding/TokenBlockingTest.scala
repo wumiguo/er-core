@@ -40,7 +40,7 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
       ("You", 8),
       ("testing", 9),
       ("I", 10)))
-    TokenBlocking.createBlocks(rdd)
+    //TokenBlocking.createBlocks(rdd)
   }
 
 }
