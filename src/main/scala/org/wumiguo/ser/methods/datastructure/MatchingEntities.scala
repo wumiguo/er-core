@@ -1,16 +1,19 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  * Represents two matching entities
-  *
-  * @author Luca Gagliardelli
-  * @since 2016/12/09
-  */
+ * MatchingEntities with 2 entityID to represent the two matching entities
+ * @author levinliu
+ * @param firstEntityID
+ * @param secondEntityID
+ */
 case class MatchingEntities(firstEntityID: String, secondEntityID: String) {
 
   /**
-    * Override the equals conditions
-    **/
+   * overwrite equals with comparison on both entityID
+   *
+   * @param that
+   * @return
+   */
   override def equals(that: Any): Boolean = {
     that match {
       case that: MatchingEntities =>
@@ -20,8 +23,10 @@ case class MatchingEntities(firstEntityID: String, secondEntityID: String) {
   }
 
   /**
-    * Custom hashcode, used to check if two objects are equals
-    **/
+   * Use two entityId hashCode concatenation string for comparision
+   *
+   * @return
+   */
   override def hashCode: Int = {
     val firstEntityHashCode = if (firstEntityID == null) 0 else firstEntityID.hashCode
     val secondEntityHashCode = if (secondEntityID == null) 0 else secondEntityID.hashCode

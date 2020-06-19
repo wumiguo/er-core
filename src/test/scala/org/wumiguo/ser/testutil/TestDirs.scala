@@ -29,4 +29,12 @@ object TestDirs {
     testDataDir + (if (path.startsWith("/")) "" else "/") + path
   }
 
+  def resolveTestResourcePath(path: String) = {
+    val url = getClass().getClassLoader.getResource(path)
+    if (url == null) {
+      throw new IllegalStateException("Please make sure the test resource " + path + "  exist, if not suggest to put a place holder file in it and build")
+    }
+    url.getPath
+  }
+
 }

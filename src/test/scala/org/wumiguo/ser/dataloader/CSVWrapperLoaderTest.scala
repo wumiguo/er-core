@@ -9,11 +9,12 @@ import org.wumiguo.ser.testutil.TestDirs
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 class CSVWrapperLoaderTest extends FlatSpec {
+
   it should " be able to load good entity profiles csv" in {
     val testCsv = TestDirs.resolveDataPath("csv/sampleEP1.csv")
     val startIDFrom = 0
     val realIDField = "entityId1"
-    //val rdd = CSVWrapper.loadProfiles(testCsv, startIDFrom, realIDField)
-    //assert(rdd!=null)
+    val rdd = CSVWrapper.loadProfiles(testCsv, startIDFrom, realIDField)
+    assert(rdd!=null)
   }
 }
