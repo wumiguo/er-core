@@ -37,7 +37,6 @@ object CSVLoader {
     val sparkSession = SparkSession.builder().getOrCreate()
     val df = sparkSession.read.option("header", header).option("sep", separator).option("delimiter", "\"").csv(filePath)
     val columnNames = df.columns
-
     df.rdd.map(row => rowToAttributes(columnNames, row, explodeInnerFields, innerSeparator)).zipWithIndex().map {
       profile =>
         val profileID = profile._2.toInt + startIDFrom

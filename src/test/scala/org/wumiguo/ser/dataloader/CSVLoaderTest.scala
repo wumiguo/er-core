@@ -49,4 +49,12 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx "+x))
   }
+  it should "load entity profiles from 2nd row" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.gen.csv")
+    val startIdFrom = 1
+    val realIDField = ""
+    val ep1Rdd = CSVLoader.loadProfiles(ep1Path, startIdFrom, realIDField)
+    println("ep1Rdd " + ep1Rdd.count())
+    ep1Rdd.foreach(x => println("epx "+x))
+  }
 }
