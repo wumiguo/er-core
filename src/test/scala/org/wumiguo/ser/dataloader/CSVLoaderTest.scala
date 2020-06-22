@@ -2,8 +2,10 @@ package org.wumiguo.ser.dataloader
 
 import org.scalatest.FlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.methods.datastructure.MatchingEntities
+import org.wumiguo.ser.methods.datastructure.{KeyValue, MatchingEntities, Profile}
 import org.wumiguo.ser.testutil.TestDirs
+
+import scala.collection.mutable
 
 /**
  * @author levinliu
@@ -41,20 +43,46 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
     assertResult(MatchingEntities("1821", "1345"))(first)
   }
 
-  it should "load entity profiles" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.gen.csv")
-    val startIdFrom = 0
+  it should "load 10 entity profiles" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.10.csv")
+    val startIdFrom = 100
     val realIDField = ""
     val ep1Rdd = CSVLoader.loadProfiles(ep1Path, startIdFrom, realIDField)
-    println("ep1Rdd " + ep1Rdd.count())
-    ep1Rdd.foreach(x => println("epx "+x))
+    assert(10 == ep1Rdd.count())
+    assertResult(Profile(100, mutable.MutableList(
+      KeyValue("_c0", "0"),
+      KeyValue("_c1", "The WASA2 object-oriented workflow management system"),
+      KeyValue("_c2", "International Conference on Management of Data"),
+      KeyValue("_c3", "Gottfried Vossen, Mathias Weske")), "", 0)
+    )(ep1Rdd.first())
   }
-  it should "load entity profiles from 2nd row" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.gen.csv")
+
+  it should "load 15 entity profiles with header" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val realIDField = ""
-    val ep1Rdd = CSVLoader.loadProfiles(ep1Path, startIdFrom, realIDField)
+    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true)
     println("ep1Rdd " + ep1Rdd.count())
-    ep1Rdd.foreach(x => println("epx "+x))
+    ep1Rdd.foreach(x => println("epx " + x))
+    assert(15 == ep1Rdd.count())
+    assertResult(Profile(1, mutable.MutableList(
+      KeyValue("year", "0"),
+      KeyValue("title", "The WASA2 object-oriented workflow management system"),
+      KeyValue("venue", "International Conference on Management of Data"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "", 0)
+    )(ep1Rdd.first())
+  }
+
+  it should "load 15 entity profiles with header and id column" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
+    val startIdFrom = 1
+    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    println("ep1Rdd " + ep1Rdd.count())
+    ep1Rdd.foreach(x => println("epx " + x))
+    assert(15 == ep1Rdd.count())
+    assertResult(Profile(1, mutable.MutableList(
+      KeyValue("title", "The WASA2 object-oriented workflow management system"),
+      KeyValue("venue", "International Conference on Management of Data"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "0", 0)
+    )(ep1Rdd.first())
   }
 }
