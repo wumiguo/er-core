@@ -23,3 +23,13 @@ sbt: 0.13
 ## Setup before run the program
 
 Spark
+
+# How-to
+
+## Build
+sbt clean package
+
+## test
+sbt clean test
+
+Or using maven is also support :-P

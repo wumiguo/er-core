@@ -183,10 +183,14 @@ object MatchingFunctions {
 
 
   def chfCosineSimilarity(p1: Profile, p2: Profile): Double = {
+    chfCosineSimilarity(p1, p2, 2)
+  }
+
+  def chfCosineSimilarity(p1: Profile, p2: Profile, nGrams: Int): Double = {
 
     // calculate the frequencies of the ngrams
-    val itemVector1 = getCharactersFrequency(p1, 2)
-    val itemVector2 = getCharactersFrequency(p2, 2)
+    val itemVector1 = getCharactersFrequency(p1, nGrams)
+    val itemVector2 = getCharactersFrequency(p2, nGrams)
 
     //calculate the total tokens of the entities
     val totalTerms1 = itemVector1.keySet.size
