@@ -8,10 +8,10 @@ import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 
 /**
- * @author levinliu
- * Created on 2020/6/11
- *         (Change file header on Settings -> Editor -> File and Code Templates)
- */
+  * @author levinliu
+  *         Created on 2020/6/11
+  *         (Change file header on Settings -> Editor -> File and Code Templates)
+  */
 object EntityClusterUtils {
 
 

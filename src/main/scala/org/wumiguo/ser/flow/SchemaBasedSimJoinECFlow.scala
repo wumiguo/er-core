@@ -32,10 +32,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val dataset1Path = getParameter(args, "dataset1", "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\datasets\\clean\\DblpAcm\\dataset1.json")
     val dataset1Format = getParameter(args, "dataset1-format", "json")
     val dataset1Id = getParameter(args, "dataset1-id", "realProfileID")
+    val attributes1 = getParameter(args, "attributes1", "year,title")
     val dataset2Path = getParameter(args, "dataset2", "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\datasets\\clean\\DblpAcm\\dataset2.json")
     val dataset2Format = getParameter(args, "dataset2-format", "json")
     val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
-    val attributes1 = getParameter(args, "attributes1", "year,title")
     val attributes2 = getParameter(args, "attributes2", "year,title")
     val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
       attributes1.split(","))
@@ -53,9 +53,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val profiles1 = JSONWrapper.loadProfiles(dataset1.path, realIDField = dataset1.dataSetId)
     val profiles2 = JSONWrapper.loadProfiles(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue())
 
-    var attributesArray = new ArrayBuffer[RDD[(Int, String)]]()
+    assert(dataset2.path == null || dataset1.attribute.length == dataset2.attribute.length,
+      "If dataset 2 exist, the number of attribute use to compare between dataset 1 and dataset 2 should be equal")
 
-    assert(dataset2.attribute == null || dataset1.attribute.length == dataset2.attribute.length, "")
+    var attributesArray = new ArrayBuffer[RDD[(Int, String)]]()
 
     for (i <- 0 until dataset1.attribute.length) {
       val attributes1 = CommonFunctions.extractField(profiles1, dataset1.attribute(i))
@@ -95,7 +96,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.info("[EDJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
 
     val profiles = profiles1.union(profiles2)
-
     val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, 0)), 0)
     clusters.cache()
     val cn = clusters.count()
@@ -104,8 +104,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.info("[EDJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
 
     log.info("[EDJoin] Total time (s) " + (t4 - t1) / 1000.0)
-
-    clusters.foreach(println(_))
   }
 
   def getParameter(args: Array[String], name: String, defaultValue: String = null): String = {
