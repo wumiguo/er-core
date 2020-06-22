@@ -80,3 +80,5 @@ hs_err_pid*
 
 /project/target/
 /target/
+
+ACMlog.txt
