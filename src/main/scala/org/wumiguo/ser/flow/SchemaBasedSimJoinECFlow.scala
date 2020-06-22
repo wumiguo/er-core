@@ -29,11 +29,11 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
       .set("spark.local.dir", "/data2/tmp")
 
     var context = new SparkContext(conf)
-    val dataset1Path = getParameter(args, "dataset1", "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\datasets\\clean\\DblpAcm\\dataset1.json")
+    val dataset1Path = getParameter(args, "dataset1", "datasets\\clean\\DblpAcm\\dataset1.json")
     val dataset1Format = getParameter(args, "dataset1-format", "json")
     val dataset1Id = getParameter(args, "dataset1-id", "realProfileID")
     val attributes1 = getParameter(args, "attributes1", "year,title")
-    val dataset2Path = getParameter(args, "dataset2", "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\datasets\\clean\\DblpAcm\\dataset2.json")
+    val dataset2Path = getParameter(args, "dataset2", "datasets\\clean\\DblpAcm\\dataset2.json")
     val dataset2Format = getParameter(args, "dataset2-format", "json")
     val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
     val attributes2 = getParameter(args, "attributes2", "year,title")
