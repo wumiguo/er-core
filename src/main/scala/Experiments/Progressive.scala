@@ -34,6 +34,7 @@ object Progressive {
         /** Leggo le posizioni in cui compare il profilo */
         val positions = positionIndex.value(profile.id)
         positions.foreach { pos =>
+
           /** Per ogni finestra dalla 1 a wMax */
           for (windowSize <- 1 to wMax) {
             /** Leggo i vicini a distanza windowSize, sia prima che dopo */
@@ -180,52 +181,50 @@ object Progressive {
   def main(args: Array[String]): Unit = {
 
 
-
-
     val conf = new SparkConf()
       .setAppName("Main")
       .setMaster("local[*]")
       .set("spark.default.parallelism", "4")
-      .set("spark.local.dir", "/data2/sparkTmp")
+      .set("spark.local.dir", "/tmp")
 
 
     //Log file path
-    val logFilePath = "C:/users/gagli/Desktop/log.txt"
+    val logFilePath = "./spark-er-run.log"
     //Main dataset path
-    val path = "C:/Users/gagli/Desktop/progetti_intellij/SparkERmulti - Copia/datasets/clean/DblpAcm/"
+    val path = getClass.getClassLoader.getResource("sampledata/clean/json").getPath
     //Dataset1 path
-    val dataset1Path = path + "dataset1.json"
+    val dataset1Path = path + "/dataset1.json"
     //Dataset2 path
-    val dataset2Path = path + "dataset2.json"
+    val dataset2Path = path + "/dataset2.json"
     //Groundtruth path
-    val groundtruthPath = path + "groundtruth.json"
+    val groundtruthPath = path + "/groundtruth.json"
 
 
     val sc = new SparkContext(conf)
 
 
     val sparkSession = SparkSession.builder().getOrCreate()
-    val x = sparkSession.read.option("header", true).csv("C:\\Users\\gagli\\Desktop\\gt.csv")
-    x.show()
+    //    val x = sparkSession.read.option("header", true).csv("C:\\Users\\gagli\\Desktop\\gt.csv")
+    //    x.show()
+    //
+    //
+    //    val ids = x.rdd.map(r => (r.getString(0).toLong, r.getString(3)))
+    //    ids.take(10).foreach(println)
+    //
+    //    ids.groupByKey().filter(_._2.size > 1).flatMap(x => x._2.toList.combinations(2)).map(x => x.mkString(",")).repartition(1).saveAsTextFile("C:/Users/gagli/Desktop/groundtruth")
+    //
+    //    //    ???
+    //
+    //
+    //    x.repartition(1).write.option("header", "true").csv("C:/Users/gagli/Desktop/csvout.csv")
+    //
+    //    //    ???
+    //
+    //    val a = sc.textFile("C:/Users/gagli/Desktop/matches.txt")
+    //    val b = a.map(x => x.split(",")).filter(_.length > 1).zipWithIndex()
+    //    b.flatMap(x => x._1.map(y => (x._2, y))).repartition(1).saveAsTextFile("C:/Users/gagli/Desktop/out.txt")
 
-
-    val ids = x.rdd.map(r => (r.getString(0).toLong, r.getString(3)))
-    ids.take(10).foreach(println)
-
-    ids.groupByKey().filter(_._2.size > 1).flatMap(x => x._2.toList.combinations(2)).map(x => x.mkString(",")).repartition(1).saveAsTextFile("C:/Users/gagli/Desktop/groundtruth")
-
-//    ???
-
-
-      x.repartition(1).write.option("header","true") .csv("C:/Users/gagli/Desktop/csvout.csv")
-
-//    ???
-
-    val a = sc.textFile("C:/Users/gagli/Desktop/matches.txt")
-    val b = a.map(x => x.split(",")).filter(_.length > 1).zipWithIndex()
-    b.flatMap(x => x._1.map(y => (x._2, y))).repartition(1).saveAsTextFile("C:/Users/gagli/Desktop/out.txt")
-
-//    ???
+    //    ???
 
     val log = LogManager.getRootLogger
     log.setLevel(Level.INFO)
@@ -234,8 +233,8 @@ object Progressive {
     log.addAppender(appender)
 
     /**
-      * Loads two datasets
-      **/
+     * Loads two datasets
+     **/
     val dataset1 = JSONWrapper.loadProfiles(dataset1Path, realIDField = "realProfileID", sourceId = 1)
     val maxIdDataset1 = dataset1.map(_.id).max()
     val dataset2 = JSONWrapper.loadProfiles(dataset2Path, realIDField = "realProfileID", sourceId = 2, startIDFrom = maxIdDataset1 + 1)

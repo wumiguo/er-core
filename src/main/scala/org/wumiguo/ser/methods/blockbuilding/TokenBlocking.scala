@@ -8,11 +8,11 @@ import org.wumiguo.ser.methods.datastructure
 import org.wumiguo.ser.methods.datastructure.{BlockAbstract, BlockClean, BlockDirty, KeyValue, KeysCluster, Profile}
 
 /**
-  * Implements the token blocking
-  *
-  * @author Luca Gagliardelli
-  * @since 2016/12/07
-  */
+ * Implements the token blocking
+ *
+ * @author Luca Gagliardelli
+ * @since 2016/12/07
+ */
 object TokenBlocking {
 
   def removeBadWords(input: RDD[(String, Int)]): RDD[(String, Int)] = {
@@ -25,13 +25,13 @@ object TokenBlocking {
 
 
   /**
-    * Performs the token blocking
-    *
-    * @param profiles      input to profiles to create blocks
-    * @param separatorIDs  list of the ids that separates the different data sources (in case of Clean-Clean ER), "-1" if Dirty ER
-    * @param keysToExclude keys to exclude from the blocking process
-    * @return the blocks
-    */
+   * Performs the token blocking
+   *
+   * @param profiles      input to profiles to create blocks
+   * @param separatorIDs  list of the ids that separates the different data sources (in case of Clean-Clean ER), "-1" if Dirty ER
+   * @param keysToExclude keys to exclude from the blocking process
+   * @return the blocks
+   */
   def createBlocks(profiles: RDD[Profile],
                    separatorIDs: Array[Int] = Array.emptyIntArray,
                    keysToExclude: Iterable[String] = Nil,
@@ -74,15 +74,15 @@ object TokenBlocking {
   }
 
   /**
-    *
-    * @param profiles
-    * @param separatorIDs
-    * @param clusters
-    * @param keysToExclude
-    * @param excludeDefaultCluster
-    * @param clusterNameSeparator
-    * @return
-    */
+   *
+   * @param profiles
+   * @param separatorIDs
+   * @param clusters
+   * @param keysToExclude
+   * @param excludeDefaultCluster
+   * @param clusterNameSeparator
+   * @return
+   */
   def createBlocksClusterDebug(profiles: RDD[Profile],
                                separatorIDs: Array[Int],
                                clusters: List[KeysCluster],
@@ -183,14 +183,14 @@ object TokenBlocking {
   }
 
   /**
-    * Performs the token blocking clustering the attributes by the keys.
-    *
-    * @param profiles      input to profiles to create blocks
-    * @param separatorIDs  id to separate profiles from different dataset (Clean-Clean context), if it is Dirty put -1
-    * @param clusters
-    * @param keysToExclude keys to exclude from the blocking process
-    * @return the blocks
-    */
+   * Performs the token blocking clustering the attributes by the keys.
+   *
+   * @param profiles      input to profiles to create blocks
+   * @param separatorIDs  id to separate profiles from different dataset (Clean-Clean context), if it is Dirty put -1
+   * @param clusters
+   * @param keysToExclude keys to exclude from the blocking process
+   * @return the blocks
+   */
   def createBlocksCluster(profiles: RDD[Profile],
                           separatorIDs: Array[Int],
                           clusters: List[KeysCluster],
@@ -285,11 +285,13 @@ object TokenBlocking {
   }
 
   /**
-    *
-    * @param elements
-    * @param separators
-    * @return
-    */
+   * split the input elements(set) into array of elements(set) by separators
+   * e.g. ele=[1,2,3,4,5,6] & sep=[3,5] => out=[[1,2,3],[4,5],[6]]
+   *
+   * @param elements
+   * @param separators
+   * @return
+   */
   def separateProfiles(elements: Set[Int], separators: Array[Int]): Array[Set[Int]] = {
     var input = elements
     var output: List[Set[Int]] = Nil
@@ -299,7 +301,6 @@ object TokenBlocking {
       output = a._1 :: output
     }
     output = input :: output
-
     output.reverse.toArray
   }
 }

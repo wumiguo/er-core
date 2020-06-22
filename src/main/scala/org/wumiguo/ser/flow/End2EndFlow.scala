@@ -26,5 +26,6 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.gen.csv").getPath
     val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true)
     log.info("ep2 size is {}", ep2Rdd.count())
+
   }
 }
