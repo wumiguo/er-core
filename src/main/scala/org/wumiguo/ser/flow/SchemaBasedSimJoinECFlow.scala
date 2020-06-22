@@ -31,11 +31,16 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     var context = new SparkContext(conf)
     val dataset1Path = getParameter(args, "dataset1", "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\datasets\\clean\\DblpAcm\\dataset1.json")
     val dataset1Format = getParameter(args, "dataset1-format", "json")
+    val dataset1Id = getParameter(args, "dataset1-id", "realProfileID")
     val dataset2Path = getParameter(args, "dataset2", "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\datasets\\clean\\DblpAcm\\dataset2.json")
     val dataset2Format = getParameter(args, "dataset2-format", "json")
-    val attributeNames = getParameter(args, "attributes", "year,title")
-    val dataset1 = new DatasetConfig(dataset1Path, dataset1Format)
-    val dataset2 = new DatasetConfig(dataset2Path, dataset2Format)
+    val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
+    val attributes1 = getParameter(args, "attributes1", "year,title")
+    val attributes2 = getParameter(args, "attributes2", "year,title")
+    val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
+      attributes1.split(","))
+    val dataset2 = new DatasetConfig(dataset2Path, dataset2Format, dataset2Id,
+      if (attributes2 != null) attributes2.split(",") else null)
 
     val logPath = "ed-join.log"
 
@@ -45,17 +50,24 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val appender = new FileAppender(layout, logPath, false)
     log.addAppender(appender)
 
-    var profiles = JSONWrapper.loadProfiles(dataset1.path, realIDField = "realProfileID")
-    profiles = profiles.union(JSONWrapper.loadProfiles(dataset2.path, realIDField = "realProfileID", startIDFrom = profiles.count().intValue()))
+    val profiles1 = JSONWrapper.loadProfiles(dataset1.path, realIDField = dataset1.dataSetId)
+    val profiles2 = JSONWrapper.loadProfiles(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue())
 
     var attributesArray = new ArrayBuffer[RDD[(Int, String)]]()
 
-    attributeNames.split(",").foreach(attributeName => {
-      var attributes = CommonFunctions.extractField(profiles, attributeName)
+    assert(dataset2.attribute == null || dataset1.attribute.length == dataset2.attribute.length, "")
+
+    for (i <- 0 until dataset1.attribute.length) {
+      val attributes1 = CommonFunctions.extractField(profiles1, dataset1.attribute(i))
+      var attributes = attributes1
+      if (dataset2.attribute != null) {
+        val attributes2 = CommonFunctions.extractField(profiles2, dataset2.attribute(i))
+        attributes = attributes1.union(attributes2)
+      }
       attributes.cache()
       attributes.count()
       attributesArray += attributes
-    })
+    }
 
     val t1 = Calendar.getInstance().getTimeInMillis
     var attributesMatches = new ArrayBuffer[RDD[(Int, Int)]]()
@@ -82,6 +94,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.info("[EDJoin] Number of matches " + nm)
     log.info("[EDJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
 
+    val profiles = profiles1.union(profiles2)
+
     val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, 0)), 0)
     clusters.cache()
     val cn = clusters.count()
@@ -90,6 +104,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.info("[EDJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
 
     log.info("[EDJoin] Total time (s) " + (t4 - t1) / 1000.0)
+
+    clusters.foreach(println(_))
   }
 
   def getParameter(args: Array[String], name: String, defaultValue: String = null): String = {
