@@ -37,7 +37,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val dataset1 = new DatasetConfig(dataset1Path, dataset1Format)
     val dataset2 = new DatasetConfig(dataset2Path, dataset2Format)
 
-    val logPath = "C:\\Users\\rinanzhi\\IdeaProjects\\er-spark\\ACMlog.txt"
+    val logPath = "ed-join.log"
 
     val log = LogManager.getRootLogger
     log.setLevel(Level.INFO)
@@ -45,8 +45,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val appender = new FileAppender(layout, logPath, false)
     log.addAppender(appender)
 
-    val profiles = JSONWrapper.loadProfiles(dataset1.path, realIDField = "realProfileID").
-      union(JSONWrapper.loadProfiles(dataset2.path, realIDField = "realProfileID"))
+    var profiles = JSONWrapper.loadProfiles(dataset1.path, realIDField = "realProfileID")
+    profiles = profiles.union(JSONWrapper.loadProfiles(dataset2.path, realIDField = "realProfileID", startIDFrom = profiles.count().intValue()))
 
     var attributesArray = new ArrayBuffer[RDD[(Int, String)]]()
 
@@ -90,8 +90,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.info("[EDJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
 
     log.info("[EDJoin] Total time (s) " + (t4 - t1) / 1000.0)
-
-    clusters.foreach(println(_))
   }
 
   def getParameter(args: Array[String], name: String, defaultValue: String = null): String = {
