@@ -76,6 +76,13 @@ object MatchingFunctions {
     common / (t1.size + t2.size - common)
   }
 
+  /**
+   * jacSim = common tokens / (numOfK1ValueToken + numOfK2ValueToken - common)
+   *
+   * @param k1
+   * @param k2
+   * @return
+   */
   def jaccardSimilarity(k1: KeyValue, k2: KeyValue): Double = {
     val t1 = getTokens(k1)
     val t2 = getTokens(k2)
@@ -85,15 +92,12 @@ object MatchingFunctions {
 
 
   def enhancedJaccardSimilarity(p1: Profile, p2: Profile): Double = {
-
     // calculate the frequencies of the tokens/ngrams
     val itemVector1 = getNGramsFrequency(p1)
     val itemVector2 = getNGramsFrequency(p2)
-
     //calculate the total tokens of the entities
     val totalTerms1 = itemVector1.keySet.size
     val totalTerms2 = itemVector2.keySet.size
-
     val vector1IsSmaller = totalTerms1 < totalTerms2
     val maxItemVector = {
       if (vector1IsSmaller) itemVector2 else itemVector1
@@ -101,15 +105,13 @@ object MatchingFunctions {
     val minItemVector = {
       if (vector1IsSmaller) itemVector1 else itemVector2
     }
-
+    //calculate the number of common tokens in both 2 vector
     val numerator = maxItemVector
       .filter(t => minItemVector.contains(t._1))
       .map(t => Math.min(t._2, minItemVector(t._1)))
       .sum
       .toDouble
-
     val denominator = totalTerms1 + totalTerms2 - numerator.toDouble;
-
     numerator / denominator
   }
 

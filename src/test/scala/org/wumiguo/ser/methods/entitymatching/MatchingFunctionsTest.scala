@@ -80,6 +80,28 @@ class MatchingFunctionsTest extends FlatSpec {
     assertResult(("code", 3))(sorted2.head)
   }
 
+
+  it should "getNGramsFrequency" in {
+    val attrs1 = mutable.MutableList[KeyValue](
+      KeyValue("title", "let's start to write some java code"),
+      KeyValue("year", "2020"),
+      KeyValue("abs", "simple coding course"),
+      KeyValue("tag", "java code develop"),
+      KeyValue("category", "engineering & code"),
+      KeyValue("auth", "lev"))
+    val p1 = Profile(1, attrs1, "jaOkd", 100)
+    val resultMap = MatchingFunctions.getNGramsFrequency(p1, 2)
+    val sorted = resultMap.toSeq.sortWith(_._2 > _._2)
+    println("result map :" + resultMap)
+    println("sorted : " + sorted)
+    assertResult(("java code", 2))(sorted.head)
+    val resultMap2 = MatchingFunctions.getNGramsFrequency(p1, 1)
+    val sorted2 = resultMap2.toSeq.sortWith(_._2 > _._2)
+    println("result map :" + resultMap2)
+    println("sorted : " + sorted2)
+    assertResult(("code", 3))(sorted2.head)
+  }
+
   it should "get cosine similarity " in {
     val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
     val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))

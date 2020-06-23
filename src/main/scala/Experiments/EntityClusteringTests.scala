@@ -1,6 +1,5 @@
 package Experiments
 
-import org.wumiguo.ser.methods.entityclustering.EntityClusterUtils.{addUnclusteredProfiles, connectedComponents}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.wumiguo.ser.dataloader.CSVWrapper
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
