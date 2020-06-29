@@ -9,14 +9,27 @@ import org.wumiguo.ser.methods.datastructure.EDJoinPrefixIndexPartitioner
 import org.wumiguo.ser.methods.similarityjoins.common.ed.{CommonEdFunctions, EdFilters}
 
 /**
- * @author levinliu
- * Created on 2020/6/11
- *         (Change file header on Settings -> Editor -> File and Code Templates)
- */
+  * @author levinliu
+  *         Created on 2020/6/11
+  *         (Change file header on Settings -> Editor -> File and Code Templates)
+  *
+  *         PRELIMINARIES
+  *         1.
+  *         A q-gram is a contiguous substring of length q; and its starting position in a string is called its position or location.
+  *         A positional q-gram is a q-gram together with its position, usually represented in the form of (token,pos)
+  *
+  * 2.Count Filtering mandates that s and t must share at least LBs;t = (max(|s|,|t|) − q + 1) − q · τ common q-grams.
+  *
+  * 3.Length Filtering mandates that ||s| − |t|| ≤ τ.
+  */
 object EDJoin {
+  /**
+    * since the blocks all has at least one token common in the prefix, the prefix filtering is completed in here while doing the groupByKey
+    */
   def buildPrefixIndex(sortedDocs: RDD[(Int, String, Array[(Int, Int)])], qgramLen: Int, threshold: Int): RDD[(Int, Array[(Int, Int, Array[(Int, Int)], String)])] = {
     val prefixLen = EdFilters.getPrefixLen(qgramLen, threshold)
 
+    //output [(tokenId,(docId,index of q-gram,q-grams/*tokenId,token index of q-gram */,string)...)]
     val allQgrams = sortedDocs.flatMap { case (docId, doc, qgrams) =>
       val prefix = qgrams.take(prefixLen)
       prefix.zipWithIndex.map { case (qgram, index) =>
@@ -24,6 +37,7 @@ object EDJoin {
       }
     }
 
+    //output [(tokenId,[strings share the same token])...],and filter the token only be owned by one string
     val blocks = allQgrams.groupByKey().filter(_._2.size > 1)
 
     blocks.map(b => (b._1, b._2.toArray.sortBy(_._3.length)))
@@ -89,27 +103,29 @@ object EDJoin {
     val customPartitioner = new EDJoinPrefixIndexPartitioner(prefixIndex.getNumPartitions)
     val repartitionIndex = prefixIndex.map(_.swap).sortBy(x => -(x._1.length * (x._1.length - 1))).partitionBy(customPartitioner)
 
-
-    repartitionIndex.flatMap { case (block, blockId) =>
+    repartitionIndex.flatMap { case (
+      block /*string contain same token in the prefix*/ ,
+      blockId /*tokenId*/ ) =>
       val results = new scala.collection.mutable.HashSet[((Int, String), (Int, String))]()
 
       var i = 0
       while (i < block.length) {
         var j = i + 1
-        val d1Id = block(i)._1
-        val d1Pos = block(i)._2
+        val d1Id = block(i)._1 // docId
+        val d1Pos = block(i)._2 // index of the prefix
         val d1Qgrams = block(i)._3
-        val d1 = block(i)._4
+        val d1 = block(i)._4 //the string 1
 
         while (j < block.length) {
-          val d2Id = block(j)._1
-          val d2Pos = block(j)._2
+          val d2Id = block(j)._1 // docId
+          val d2Pos = block(j)._2 // index of the prefix
           val d2Qgrams = block(j)._3
-          val d2 = block(j)._4
+          val d2 = block(j)._4 //the string 2
 
           if (d1Id != d2Id &&
             isLastCommonTokenPosition(d1Qgrams, d2Qgrams, blockId, qgramLength, threshold) &&
             math.abs(d1Pos - d2Pos) <= threshold &&
+            //length filtering
             math.abs(d1Qgrams.length - d2Qgrams.length) <= threshold
           ) {
             if (EdFilters.commonFilter(d1Qgrams, d2Qgrams, qgramLength, threshold)) {
@@ -129,17 +145,29 @@ object EDJoin {
     }
   }
 
+  def getPositionalQGrams(documents: RDD[(Int, String)], qgramLength: Int): RDD[(Int, String, Array[(String, Int)])] = {
+    documents.map(x => (x._1, x._2, CommonEdFunctions.getQgrams(x._2, qgramLength)))
+  }
 
   def getCandidates(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[((Int, String), (Int, String))] = {
     //Transforms the documents into n-grams
-    val docs = documents.map(x => (x._1, x._2, CommonEdFunctions.getQgrams(x._2, qgramLength)))
+    //output example
+    //(docId,string,positional q-gram)
+    //(3783,concurrency control in hierarchical multidatabase systems,((co,0),(on,1),(nc,2),(cu,3),(ur,4),(rr,5),(re,6),(en,7)......))
+    val docs = getPositionalQGrams(documents, qgramLength)
 
     //Sorts the n-grams by their document frequency
+    /** From the paper
+      * We can extract all the positional q-grams of a string and order them by decreasing order of their idf values and increasing order of their locations.
+      */
+    //output [(docId,string,[(token index,token position of q-gram),...]),...]
+    //q-gram is order by rare decreasing, the rarest one in the head of the array
     val sortedDocs = CommonEdFunctions.getSortedQgrams2(docs)
     sortedDocs.persist(StorageLevel.MEMORY_AND_DISK)
     sortedDocs.count()
 
     val ts = Calendar.getInstance().getTimeInMillis
+    //output [(tokenId,[strings contain same token])...]
     val prefixIndex = buildPrefixIndex(sortedDocs, qgramLength, threshold)
     prefixIndex.persist(StorageLevel.MEMORY_AND_DISK)
     val np = prefixIndex.count()
@@ -147,6 +175,7 @@ object EDJoin {
     val te = Calendar.getInstance().getTimeInMillis
     val log = LogManager.getRootLogger
 
+    //only use to do the statistics, not a part of the algorithm
     val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
     val min = a.min()
     val max = a.max()
