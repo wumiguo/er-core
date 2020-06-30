@@ -204,7 +204,6 @@ object TokenBlocking {
     val entropies = clusters.map(cluster => (cluster.id, cluster.entropy)).toMap
     /** Creates a map that map each key of a cluster to it id */
     val clusterMap = clusters.flatMap(c => c.keys.map(key => (key, c.id))).toMap
-
     /* Generates the tokens for each profile */
     val tokensPerProfile = profiles.map {
       profile =>

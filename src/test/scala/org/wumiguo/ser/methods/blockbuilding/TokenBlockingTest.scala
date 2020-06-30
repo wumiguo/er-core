@@ -3,8 +3,10 @@ package org.wumiguo.ser.methods.blockbuilding
 import org.scalatest.FlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.CSVLoader
-import org.wumiguo.ser.methods.datastructure.KeysCluster
+import org.wumiguo.ser.methods.datastructure.{BlockDirty, KeyValue, KeysCluster, Profile}
 import org.wumiguo.ser.testutil.TestDirs
+
+import scala.collection.mutable
 
 /**
  * @author levinliu
@@ -31,6 +33,22 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     assertResult(6)(result.count())
   }
 
+  it should "create blocks v1" in {
+    val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
+    val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))
+    val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("author", "liu"))
+    val p1 = Profile(1, attrs1, "jaOkd", 100)
+    val p2 = Profile(2, attrs2, "Uja2d", 102)
+    val p3 = Profile(3, attrs3, "Xlal3", 103)
+    val rdd = spark.sparkContext.parallelize(Seq(
+      p1, p2, p3
+    ))
+    println("ep1Rdd size = " + rdd.count())
+    val blockRdd = TokenBlocking.createBlocks(rdd)
+    println("blocks size = " + blockRdd.count())
+    blockRdd.foreach(x => println("block : " + x))
+  }
+
   it should "create blocks" in {
     val rdd = spark.sparkContext.parallelize(Seq(
       ("Hello, my team is bigdata", 1),
@@ -46,7 +64,9 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
     val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    println("ep1Rdd size = " + ep1Rdd.count())
     val blockRdd = TokenBlocking.createBlocks(ep1Rdd)
+    println("blocks size = " + blockRdd.count())
     blockRdd.foreach(x => println("block : " + x))
   }
 
@@ -70,4 +90,78 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     blockRdd.foreach(x => println("block : " + x))
   }
 
+  it should "createBlocksCluster v2 " in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
+    val startIdFrom = 1
+    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    ep1Rdd.foreach(x => println("ep1Rdd : " + x))
+    val separators = Array[Int]()
+    var clusters = List[KeysCluster]()
+    clusters = KeysCluster(1000, List("name", "nome")) :: clusters
+    val blockRdd = TokenBlocking.createBlocksCluster(ep1Rdd, separators, clusters)
+    blockRdd.foreach(x => println("block : " + x))
+  }
+
+
+  it should "createBlocksCluster v3 " in {
+    val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
+    val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))
+    val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("postBy", "liu"))
+    val attrs4 = mutable.MutableList[KeyValue](KeyValue("title", "bigdata tech"), KeyValue("author", "liu"))
+    val p1 = Profile(1, attrs1, "jaOkd", 100)
+    val p2 = Profile(2, attrs2, "Uja2d", 102)
+    val p3 = Profile(3, attrs3, "Xlal3", 103)
+    val p4 = Profile(4, attrs4, "Ulo04", 104)
+    val rdd = spark.sparkContext.parallelize(Seq(
+      p1, p2, p3, p4
+    ))
+    rdd.foreach(x => println("ep1Rdd : " + x))
+    val separators = Array[Int]()
+    var clusters = List[KeysCluster]()
+    clusters = KeysCluster(1000, List("name", "nome")) :: clusters
+    clusters = KeysCluster(111, List("title")) :: clusters
+    clusters = KeysCluster(22, List("author", "postBy")) :: clusters
+    val blockRdd = TokenBlocking.createBlocksCluster(rdd, separators, clusters)
+    blockRdd.foreach(x => println("block : " + x))
+    assert(blockRdd.count() == 3)
+    var data = Array[Set[Int]]()
+    data +:= Set[Int](3, 4)
+    val exp = BlockDirty(blockID = 0, profiles = data, entropy = 1.0, clusterID = 2222, blockingKey = "bigdata_2222")
+    //assertResult(exp)(blockRdd.first())
+    val output = blockRdd.sortBy(_.blockingKey, false).first()
+    println("comparision ", output.getComparisons())
+    assert(exp.clusterID != output.clusterID)
+    assert(exp.getComparisons() == output.getComparisons())
+  }
+
+  it should "createBlocksCluster v4 with data from same data source(sourceID) " in {
+    val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
+    val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))
+    val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("postBy", "liu"))
+    val attrs4 = mutable.MutableList[KeyValue](KeyValue("title", "bigdata tech"), KeyValue("author", "liu"))
+    val p1 = Profile(1, attrs1, "jaOkd", 102)
+    val p2 = Profile(2, attrs2, "Uja2d", 102)
+    val p3 = Profile(3, attrs3, "Xlal3", 102)
+    val p4 = Profile(4, attrs4, "Ulo04", 102)
+    val rdd = spark.sparkContext.parallelize(Seq(
+      p1, p2, p3, p4
+    ))
+    rdd.foreach(x => println("ep1Rdd : " + x))
+    val separators = Array[Int]()
+    var clusters = List[KeysCluster]()
+    clusters = KeysCluster(1000, List("name", "nome")) :: clusters
+    clusters = KeysCluster(111, List("102_title")) :: clusters
+    clusters = KeysCluster(22, List("102_author", "postBy")) :: clusters
+    val blockRdd = TokenBlocking.createBlocksCluster(rdd, separators, clusters)
+    blockRdd.foreach(x => println("block : " + x))
+    assert(blockRdd.count() == 3)
+    var data = Array[Set[Int]]()
+    data +:= Set[Int](3, 4)
+    val exp = BlockDirty(blockID = 0, profiles = data, entropy = 1.0, clusterID = 111, blockingKey = "bigdata_111")
+    //assertResult(exp)(blockRdd.first())
+    val output = blockRdd.sortBy(_.blockingKey, false).first()
+    println("comparision ", output.getComparisons())
+    assert(exp.clusterID == output.clusterID)
+    assert(exp.getComparisons() == output.getComparisons())
+  }
 }
