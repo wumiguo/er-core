@@ -22,8 +22,6 @@ class EntityMatchingTest extends FlatSpec with SparkEnvSetup {
     val prof2 = Profile(12, attrs, "o101", 12)
     val profiles = spark.sparkContext.parallelize(Seq((11, prof1), (12, prof2)))
     val data = EntityMatching.getComparisons(candiPairs, profiles)
-    println("result:" + data.count())
-    data.foreach(x => println("data:" + x._1 + ", " + x._2.toList))
     val first = data.sortBy(_._1.id).first()
     assertResult(prof1)(first._1)
     assertResult(List(101, 111))(first._2)
@@ -121,12 +119,14 @@ class EntityMatchingTest extends FlatSpec with SparkEnvSetup {
     }
   }
   it should "entityMatchingCB" in {
-    val candiPairs = spark.sparkContext.parallelize(Seq(UnweightedEdge(11, 101), UnweightedEdge(12, 102), UnweightedEdge(11, 111)))
+    val candiPairs = spark.sparkContext.parallelize(Seq(UnweightedEdge(11, 101), UnweightedEdge(11111, 11), UnweightedEdge(12, 102), UnweightedEdge(11, 111)))
     val attrs = mutable.MutableList[KeyValue]()
     attrs += KeyValue("title", "entity matching test")
     val prof1 = Profile(11, attrs, "o101", 11)
     val prof2 = Profile(12, attrs, "o101", 12)
-    val profiles = spark.sparkContext.parallelize(Seq(prof1, prof2), 2)
+    attrs += KeyValue("author", "levin")
+    val prof3 = Profile(11111, attrs, "o111", 11211)
+    val profiles = spark.sparkContext.parallelize(Seq(prof1, prof2, prof3), 2)
     val weightedEdgeWithRdd = EntityMatching.entityMatchingCB(profiles, candiPairs, 2)
     println("x=:" + weightedEdgeWithRdd._2)
     val weRdd = weightedEdgeWithRdd._1
