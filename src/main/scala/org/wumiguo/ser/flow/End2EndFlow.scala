@@ -4,7 +4,8 @@ import org.slf4j.LoggerFactory
 import org.wumiguo.ser.ERFlowLauncher.getClass
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.CSVLoader
-import org.wumiguo.ser.methods.datastructure.Profile
+import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
+import org.wumiguo.ser.methods.datastructure.{KeysCluster, Profile}
 import org.wumiguo.ser.methods.entitymatching.{EntityMatching, MatchingFunctions}
 
 /**
@@ -24,13 +25,26 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
     val gtRdd = CSVLoader.loadGroundTruth(gtPath)
     log.info("gt size is {}", gtRdd.count())
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.gen.csv").getPath
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIDFrom = 0, separator = ",", header = true)
+    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = 1001)
     log.info("ep1 size is {}", ep1Rdd.count())
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.gen.csv").getPath
-    val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true)
+    val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = 2002)
     log.info("ep2 size is {}", ep2Rdd.count())
     //build blocks
-
+    val separators = Array[Int]()
+    var clusters = List[KeysCluster]()
+    //TODO: generate the key clusters programmatically
+    clusters = KeysCluster(100111, List("1001_year", "2002_year")) :: clusters
+    clusters = KeysCluster(100112, List("1001_title", "2002_title")) :: clusters
+    clusters = KeysCluster(100113, List("1001_authors", "2002_authors")) :: clusters
+    clusters = KeysCluster(100114, List("1001_venue", "2002_venue")) :: clusters
+    //    TokenBlocking.createBlocksCluster()
+    val ep1Blocks = TokenBlocking.createBlocksCluster(ep1Rdd, separators, clusters)
+    val ep2Blocks = TokenBlocking.createBlocksCluster(ep2Rdd, separators, clusters)
+    log.info("ep1blocks {}", ep1Blocks.count())
+    log.info("ep2blocks {}", ep2Blocks.count())
+    ep1Blocks.top(10).foreach(b => log.info("ep1b is {}", b))
+    ep2Blocks.top(10).foreach(b => log.info("ep2b is {}", b))
     //block cleaning
 
     //comparision cleaning
