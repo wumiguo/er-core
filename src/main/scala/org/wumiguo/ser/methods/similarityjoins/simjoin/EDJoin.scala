@@ -123,12 +123,14 @@ object EDJoin {
           val d2 = block(j)._4 //the string 2
 
           if (d1Id != d2Id &&
+            //make sure each string pair will only be do the common filter once(which consume lots of compute resource)
             isLastCommonTokenPosition(d1Qgrams, d2Qgrams, blockId, qgramLength, threshold) &&
             math.abs(d1Pos - d2Pos) <= threshold &&
             //length filtering
             math.abs(d1Qgrams.length - d2Qgrams.length) <= threshold
           ) {
             if (EdFilters.commonFilter(d1Qgrams, d2Qgrams, qgramLength, threshold)) {
+              //avoid add duplicated pair
               if (d1Id < d2Id) {
                 results.add(((d1Id, d1), (d2Id, d2)))
               }
