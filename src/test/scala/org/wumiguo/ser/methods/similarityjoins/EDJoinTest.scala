@@ -83,7 +83,7 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
         (6, "is string with 2 delete change")
       ))
     var results = EDJoin.getMatches(docs, 3, 1).collect
-    assertResult(Array(()))(results)
+    assertResult(Array())(results)
   }
 
 }
