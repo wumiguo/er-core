@@ -56,5 +56,35 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
     )(prefixIndex(0)._2.map(_._4))
   }
 
+  it should "getMatches should match string within edit distance is 1" in {
+    val docs = spark.sparkContext.parallelize(
+      Seq(
+        (1, "this string with 1 insert change"),
+        (2, "mthis string with 1 insert change"),
+        (3, "this string with 1 substitution change"),
+        (4, "mhis string with 1 substitution change"),
+        (5, "this string with 1 delete change"),
+        (6, "his string with 1 delete change")
+      ))
+    var results = EDJoin.getMatches(docs, 3, 1).collect
+    assertResult(
+      Array((3, 4), (1, 2), (5, 6))
+    )(results)
+  }
+
+  it should "getMatches should not match string within edit distance is 2 when the threadhold is 1" in {
+    val docs = spark.sparkContext.parallelize(
+      Seq(
+        (1, "this string with 2 insert change"),
+        (2, "mmthis string with 2 insert change"),
+        (3, "this string with 2 substitution change"),
+        (4, "mmis string with 2 substitution change"),
+        (5, "this string with 2 delete change"),
+        (6, "is string with 2 delete change")
+      ))
+    var results = EDJoin.getMatches(docs, 3, 1).collect
+    assertResult(Array(()))(results)
+  }
+
 }
 

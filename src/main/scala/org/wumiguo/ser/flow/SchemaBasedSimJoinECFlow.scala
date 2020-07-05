@@ -32,11 +32,11 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val dataset1Path = getParameter(args, "dataset1", "datasets\\clean\\DblpAcm\\dataset1.json")
     val dataset1Format = getParameter(args, "dataset1-format", "json")
     val dataset1Id = getParameter(args, "dataset1-id", "realProfileID")
-    val attributes1 = getParameter(args, "attributes1", "year,title")
+    val attributes1 = getParameter(args, "attributes1", "title")
     val dataset2Path = getParameter(args, "dataset2", "datasets\\clean\\DblpAcm\\dataset2.json")
     val dataset2Format = getParameter(args, "dataset2-format", "json")
     val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
-    val attributes2 = getParameter(args, "attributes2", "year,title")
+    val attributes2 = getParameter(args, "attributes2", "title")
     val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
       attributes1.split(","))
     val dataset2 = new DatasetConfig(dataset2Path, dataset2Format, dataset2Id,
