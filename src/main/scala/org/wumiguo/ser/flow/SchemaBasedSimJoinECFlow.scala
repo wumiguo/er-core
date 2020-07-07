@@ -10,7 +10,7 @@ import org.wumiguo.ser.entity.parameter.DatasetConfig
 import org.wumiguo.ser.methods.datastructure.WeightedEdge
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
-import org.wumiguo.ser.methods.similarityjoins.simjoin.EDJoin
+import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -23,7 +23,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
 
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
-      .setAppName("Main")
+      .setAppName("SchemaBasedSimJoinECFlow")
       .setMaster("local[*]")
       .set("spark.default.parallelism", "4")
       .set("spark.local.dir", "/data2/tmp")
@@ -37,12 +37,15 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val dataset2Format = getParameter(args, "dataset2-format", "json")
     val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
     val attributes2 = getParameter(args, "attributes2", "title")
-    val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
-      attributes1.split(","))
-    val dataset2 = new DatasetConfig(dataset2Path, dataset2Format, dataset2Id,
-      if (attributes2 != null) attributes2.split(",") else null)
 
-    val logPath = "ed-join.log"
+    val algorithm = getParameter(args, "algorithm", "EDJoin")
+
+    val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
+      Option(attributes1).map(_.split(",")).orNull)
+    val dataset2 = new DatasetConfig(dataset2Path, dataset2Format, dataset2Id,
+      Option(attributes2).map(_.split(",")).orNull)
+
+    val logPath = "ss-join.log"
 
     val log = LogManager.getRootLogger
     log.setLevel(Level.INFO)
@@ -56,24 +59,32 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     assert(dataset2.path == null || dataset1.attribute.length == dataset2.attribute.length,
       "If dataset 2 exist, the number of attribute use to compare between dataset 1 and dataset 2 should be equal")
 
-    var attributesArray = new ArrayBuffer[RDD[(Int, String)]]()
+    var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
 
     for (i <- 0 until dataset1.attribute.length) {
       val attributes1 = CommonFunctions.extractField(profiles1, dataset1.attribute(i))
-      var attributes = attributes1
-      if (dataset2.attribute != null) {
-        val attributes2 = CommonFunctions.extractField(profiles2, dataset2.attribute(i))
-        attributes = attributes1.union(attributes2)
-      }
-      attributes.cache()
-      attributes.count()
-      attributesArray += attributes
+      val attributes2 = Option(dataset2.attribute).map(attributes => CommonFunctions.extractField(profiles2, attributes(i))).orNull
+      attributesArray += ((attributes1, attributes2))
     }
 
     val t1 = Calendar.getInstance().getTimeInMillis
     var attributesMatches = new ArrayBuffer[RDD[(Int, Int)]]()
-    attributesArray.foreach(attributes => {
-      val attributesMatch = EDJoin.getMatches(attributes, 2, 2)
+    var attributeses = ArrayBuffer[RDD[(Int, String)]]()
+    attributesArray.foreach(attributesTuple => {
+      val attributes1 = attributesTuple._1
+      val attributes2 = attributesTuple._2
+      val attributesMatch: RDD[(Int, Int)] =
+        algorithm match {
+          case "EDJoin" =>
+            val attributes = attributes1.union(attributes2)
+            attributeses += attributes
+            attributes.cache()
+            EDJoin.getMatches(attributes, 2, 2)
+          case "PartEnum" =>
+            attributes1.cache()
+            attributes2.cache()
+            PartEnum.getMatches(attributes1, attributes2, 2, 2, 0.8)
+        }
       attributesMatches += attributesMatch
     })
 
@@ -91,7 +102,11 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
 
     val nm = matches.count()
     val t3 = Calendar.getInstance().getTimeInMillis
-    attributesArray.foreach(attributes => attributes.unpersist())
+    attributesArray.foreach(attributesTuple => {
+      Option(attributesTuple._1).map(_.unpersist())
+      Option(attributesTuple._2).map(_.unpersist())
+    })
+    attributeses.foreach(_.unpersist())
     log.info("[EDJoin] Number of matches " + nm)
     log.info("[EDJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
 
