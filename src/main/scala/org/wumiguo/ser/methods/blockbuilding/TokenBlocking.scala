@@ -241,6 +241,7 @@ object TokenBlocking {
     /* For each tokens divides the profiles in two lists according to the original datasets where they come (in case of Clean-Clean) */
     val profilesGrouped = profilePerKey map {
       case (blockingKey, entityIds) =>
+        println("bk entityIds = " + blockingKey+ "," +entityIds.toList)
         val blockEntities = {
           if (separatorIDs.isEmpty) {
             Array(entityIds.toSet)
@@ -249,6 +250,7 @@ object TokenBlocking {
             TokenBlocking.separateProfiles(entityIds.toSet, separatorIDs)
           }
         }
+        //blockEntities.foreach(x=>println("blockEntity=" + x ))
         var clusterID = defaultClusterID
         val entropy = {
           try {

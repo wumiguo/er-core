@@ -3,7 +3,7 @@ package org.wumiguo.ser.methods.blockbuilding
 import org.scalatest.FlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.CSVLoader
-import org.wumiguo.ser.methods.datastructure.{BlockDirty, KeyValue, KeysCluster, Profile}
+import org.wumiguo.ser.methods.datastructure.{BlockClean, BlockDirty, KeyValue, KeysCluster, Profile}
 import org.wumiguo.ser.testutil.TestDirs
 
 import scala.collection.mutable
@@ -76,6 +76,8 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     val result = TokenBlocking.separateProfiles(input, separators)
     result.foreach(x => println("result is = " + x))
     assert(4 == result.length)
+    val first = result.take(1).head
+    assert(Set(0, 10, 11) == first)
   }
 
   it should "createBlocksCluster " in {
@@ -103,7 +105,7 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
   }
 
 
-  it should "createBlocksCluster v3 " in {
+  it should "createBlocksCluster from different data set " in {
     val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
     val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))
     val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("postBy", "liu"))
@@ -160,7 +162,39 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     val exp = BlockDirty(blockID = 0, profiles = data, entropy = 1.0, clusterID = 111, blockingKey = "bigdata_111")
     //assertResult(exp)(blockRdd.first())
     val output = blockRdd.sortBy(_.blockingKey, false).first()
-    println("comparision ", output.getComparisons())
+    println("comparision= ", output.getComparisons())
+    assert(exp.clusterID == output.clusterID)
+    assert(exp.getComparisons() == output.getComparisons())
+  }
+
+  it should "createBlocksCluster v6 with data from 2 data source(sourceID) " in {
+    val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
+    val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))
+    val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("postBy", "liu"))
+    val attrs4 = mutable.MutableList[KeyValue](KeyValue("title", "bigdata tech"), KeyValue("author", "liu"))
+    val attrs5 = mutable.MutableList[KeyValue](KeyValue("title", "data tech"), KeyValue("author", "levin"))
+    val p1 = Profile(1, attrs1, "jaOkd", 102)
+    val p2 = Profile(2, attrs2, "Uja2d", 103)
+    val p3 = Profile(3, attrs3, "Xlal3", 102)
+    val p4 = Profile(4, attrs4, "Ulo04", 103)
+    val p5 = Profile(5, attrs5, "Ulo05", 102)
+    val rdd = spark.sparkContext.parallelize(Seq(
+      p1, p2, p3, p4, p5
+    ))
+    val separators = Array[Int](6)
+    var clusters = List[KeysCluster]()
+    clusters = KeysCluster(1000, List("name", "nome")) :: clusters
+    clusters = KeysCluster(111, List("102_title")) :: clusters
+    clusters = KeysCluster(22, List("102_author", "102_postBy")) :: clusters
+    val blockRdd = TokenBlocking.createBlocksCluster(rdd, separators, clusters)
+    blockRdd.foreach(x => println("block : " + x))
+    assertResult(2)(blockRdd.count())
+    var data = Array[Set[Int]](Set[Int](6))
+    val exp = BlockClean(blockID = 0, profiles = data, entropy = 1.0, clusterID = 111, blockingKey = "tech_111")
+    //assertResult(exp)(blockRdd.first())
+    val output = blockRdd.sortBy(_.blockingKey, false).first()
+    println("first output=" + output)
+    println("comparision= ", output.getComparisons())
     assert(exp.clusterID == output.clusterID)
     assert(exp.getComparisons() == output.getComparisons())
   }

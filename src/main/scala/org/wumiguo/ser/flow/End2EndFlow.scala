@@ -4,9 +4,13 @@ import org.slf4j.LoggerFactory
 import org.wumiguo.ser.ERFlowLauncher.getClass
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.CSVLoader
+import org.wumiguo.ser.flow.End2EndFlow.log
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
+import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
 import org.wumiguo.ser.methods.datastructure.{KeysCluster, Profile}
+import org.wumiguo.ser.methods.entityclustering.EntityClusterUtils
 import org.wumiguo.ser.methods.entitymatching.{EntityMatching, MatchingFunctions}
+import org.wumiguo.ser.methods.util.Converters
 
 /**
  * @author levinliu
@@ -45,13 +49,33 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
     log.info("ep2blocks {}", ep2Blocks.count())
     ep1Blocks.top(10).foreach(b => log.info("ep1b is {}", b))
     ep2Blocks.top(10).foreach(b => log.info("ep2b is {}", b))
+    val profileBlocks1 = Converters.blocksToProfileBlocks(ep1Blocks)
+    val profileBlocks2 = Converters.blocksToProfileBlocks(ep2Blocks)
+    log.info("pb count1 {}", profileBlocks1.count())
+    log.info("pb count2 {}", profileBlocks2.count())
+    log.info("pb first1 {}", profileBlocks1.first())
+    log.info("pb first2 {}", profileBlocks2.first())
     //block cleaning
-
+    val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks1, r = 0.5)
+    val profileBlockFilter2 = BlockFiltering.blockFiltering(profileBlocks2, r = 0.5)
+    log.info("pb count1 {}", profileBlockFilter1.count())
+    log.info("pb count2 {}", profileBlockFilter2.count())
+    log.info("pb first1 {}", profileBlockFilter1.first())
+    log.info("pb first2 {}", profileBlockFilter2.first())
     //comparision cleaning
-
+    val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1)
+    val abRdd2 = Converters.profilesBlockToBlocks(profileBlockFilter2)
+    val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)
+    val pAbRdd2 = BlockPurging.blockPurging(abRdd2, 0.6)
     //entity matching
-
+    val weRdd = ep1Rdd.flatMap(p1 =>
+      ep2Rdd.map(p2 =>
+        EntityMatching.profileMatching(p1, p2, MatchingFunctions.jaccardSimilarity)
+      ).toLocalIterator
+    )
     //entity clustering
+    val connected = EntityClusterUtils.connectedComponents(weRdd)
+    connected.top(10).foreach(x => println("connected=" + x))
     val p1 = Profile(1)
     val p2 = Profile(2)
     EntityMatching.profileMatching(p1, p2, MatchingFunctions.chfCosineSimilarity)

@@ -10,6 +10,13 @@ package org.wumiguo.ser.methods.datastructure
  * @param blockingKey
  */
 case class BlockClean(blockID: Int, profiles: Array[Set[Int]], var entropy: Double = -1, var clusterID: Integer = -1, blockingKey: String = "") extends BlockAbstract with Serializable {
+  override def toString():String={
+    "BlockClean(blockId:" +blockID+
+      ",key=" + blockingKey +
+      ",profiles=" +profiles.toList +
+      ",ent="+entropy+",clusterId="+clusterID+")"
+  }
+
   override def getComparisonSize(): Double = {
     val a = profiles.filter(_.nonEmpty)
     if (a.length > 1) {
@@ -33,11 +40,12 @@ case class BlockClean(blockID: Int, profiles: Array[Set[Int]], var entropy: Doub
 
   override def getComparisons(): Set[(Int, Int)] = {
     var out: List[(Int, Int)] = Nil
-
+    //println("profiles " + profiles.indices)
     for (i <- profiles.indices) {
       for (j <- (i + 1) until profiles.length) {
         val a = profiles(i)
         val b = profiles(j)
+        //println("a " + a + " b " + b)
         for (e1 <- a; e2 <- b) {
           if (e1 < e2) {
             out = (e1, e2) :: out
