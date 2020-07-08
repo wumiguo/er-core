@@ -1,7 +1,8 @@
 package org.wumiguo.ser
 
 import org.slf4j.LoggerFactory
-import org.wumiguo.ser.flow.End2EndFlow
+import org.wumiguo.ser.flow.{End2EndFlow, End2EndSimpleFlow}
+import org.wumiguo.ser.flow.End2EndFlow.{createLocalSparkSession, getClass}
 
 /**
  * @author levinliu
@@ -13,7 +14,8 @@ object ERFlowLauncher {
 
   def main(args: Array[String]): Unit = {
     log.info("start spark-er flow now")
-    End2EndFlow.run
+    // End2EndFlow.run
+    End2EndSimpleFlow.run
     log.info("end spark-er flow now")
   }
 }
