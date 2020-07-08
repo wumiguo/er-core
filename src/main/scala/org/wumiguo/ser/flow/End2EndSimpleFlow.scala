@@ -72,7 +72,8 @@ object End2EndSimpleFlow extends ERFlow with SparkEnvSetup {
     val weRdd = combinedRdd.map(x => EntityMatching.profileMatching(x._1, x._2, MatchingFunctions.jaccardSimilarity))
     //entity clustering
     val connected = EntityClusterUtils.connectedComponents(weRdd)
-    connected.top(10).foreach(x => log.info("connected=" + x))
+    connected.top(5).foreach(x => log.info("connected=" + x))
+    //val lessThan20 = connected.filter(x => x._3 < 0.2)
     spark.close()
   }
 }
