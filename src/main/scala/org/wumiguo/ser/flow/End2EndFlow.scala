@@ -22,7 +22,7 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
 
   def run: Unit = {
     //data reading
-    val sparkSession = createLocalSparkSession(getClass.getName)
+    val spark = createLocalSparkSession(getClass.getName)
     log.info("launch full end2end flow")
     val gtPath = getClass.getClassLoader.getResource("sampledata/dblpAcmIdDuplicates.gen.csv").getPath
     log.info("load ground-truth from path {}", gtPath)
@@ -68,16 +68,13 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
     val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)
     val pAbRdd2 = BlockPurging.blockPurging(abRdd2, 0.6)
     //entity matching
-    val weRdd = ep1Rdd.flatMap(p1 =>
-      ep2Rdd.map(p2 =>
-        EntityMatching.profileMatching(p1, p2, MatchingFunctions.jaccardSimilarity)
-      ).toLocalIterator
-    )
+    val broadcastVar = spark.sparkContext.broadcast(ep1Rdd.collect())
+    val combinedRdd = ep2Rdd.flatMap(p2 => broadcastVar.value.map(p1 => (p1, p2)))
+    //val combinedRdd = ep1Rdd.flatMap(p1 => (ep2Rdd.map(p2 => (p1, p2)).toLocalIterator))
+    combinedRdd.take(3).foreach(x => log.info("combined {}", x))
+    val weRdd = combinedRdd.map(x => EntityMatching.profileMatching(x._1, x._2, MatchingFunctions.jaccardSimilarity))
     //entity clustering
     val connected = EntityClusterUtils.connectedComponents(weRdd)
-    connected.top(10).foreach(x => println("connected=" + x))
-    val p1 = Profile(1)
-    val p2 = Profile(2)
-    EntityMatching.profileMatching(p1, p2, MatchingFunctions.chfCosineSimilarity)
+    connected.top(10).foreach(x => log.info("connected=" + x))
   }
 }
