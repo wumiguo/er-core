@@ -80,10 +80,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
             attributeses += attributes
             attributes.cache()
             EDJoin.getMatches(attributes, 2, 2)
-          case "PartEnum" =>
-            attributes1.cache()
-            attributes2.cache()
-            PartEnum.getMatches(attributes1, attributes2, 2, 2, 0.8)
+//          case "PartEnum" =>
+//            attributes1.cache()
+//            attributes2.cache()
+//            PartEnum.getMatches(attributes1, attributes2, 2, 2, 0.8)
         }
       attributesMatches += attributesMatch
     })
