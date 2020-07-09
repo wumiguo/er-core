@@ -25,20 +25,22 @@ object End2EndSimpleFlow extends ERFlow with SparkEnvSetup {
     log.info("load ground-truth from path {}", gtPath)
     val gtRdd = CSVLoader.loadGroundTruth(gtPath)
     log.info("gt size is {}", gtRdd.count())
+    val sourceId1 = 1001
+    val sourceId2 = 1002
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.mini.gen.csv").getPath
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = 1001)
+    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = sourceId1)
     log.info("ep1 size is {}", ep1Rdd.count())
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.mini.gen.csv").getPath
-    val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = 2002)
+    val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = sourceId2)
     log.info("ep2 size is {}", ep2Rdd.count())
     //build blocks
     val separators = Array[Int]()
     var clusters = List[KeysCluster]()
-    //TODO: generate the key clusters programmatically
-    clusters = KeysCluster(100111, List("1001_year", "2002_year")) :: clusters
-    clusters = KeysCluster(100112, List("1001_title", "2002_title")) :: clusters
-    clusters = KeysCluster(100113, List("1001_authors", "2002_authors")) :: clusters
-    clusters = KeysCluster(100114, List("1001_venue", "2002_venue")) :: clusters
+    //TODO: user pre-input to label the columns that potentially matched
+    clusters = KeysCluster(100111, List(sourceId1 + "_year", sourceId2 + "_year")) :: clusters
+    clusters = KeysCluster(100112, List(sourceId1 + "_title", sourceId2 + "_title")) :: clusters
+    clusters = KeysCluster(100113, List(sourceId1 + "_authors", sourceId2 + "_authors")) :: clusters
+    clusters = KeysCluster(100114, List(sourceId1 + "_venue", sourceId2 + "_venue")) :: clusters
     //    TokenBlocking.createBlocksCluster()
     val ep1Blocks = TokenBlocking.createBlocksCluster(ep1Rdd, separators, clusters)
     val ep2Blocks = TokenBlocking.createBlocksCluster(ep2Rdd, separators, clusters)
