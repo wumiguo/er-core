@@ -5,11 +5,11 @@ import scala.collection.mutable.ArrayBuffer
 
 class Category {
 
-  var THRESHOLD: Float = null
-  var N1: Int = null
-  var N2: Int = null
-  var K: Int = null
-  var K2: Int = null
+  var THRESHOLD: Float = 0.000001f//by default no filter out, set a default number instead of Null
+  var N1: Int = 0
+  var N2: Int = 0
+  var K: Int = 0
+  var K2: Int = 0
   var range_start: ArrayBuffer[ArrayBuffer[Int]] = new ArrayBuffer[ArrayBuffer[Int]]()
   var range_end: ArrayBuffer[ArrayBuffer[Int]] = new ArrayBuffer[ArrayBuffer[Int]]()
 

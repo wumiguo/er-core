@@ -66,7 +66,7 @@ object End2EndSimpleFlow extends ERFlow with SparkEnvSetup {
     val broadcastVar = spark.sparkContext.broadcast(ep1Rdd.collect())
     val combinedRdd = ep2Rdd.flatMap(p2 => broadcastVar.value.map(p1 => (p1, p2)))
     //val combinedRdd = ep1Rdd.flatMap(p1 => (ep2Rdd.map(p2 => (p1, p2)).toLocalIterator))
-    combinedRdd.take(3).foreach(x => log.info("pb-detail-cb combined {}", x))
+    combinedRdd.take(2).foreach(x => log.info("pb-detail-cb combined {}", x))
     val weRdd = combinedRdd.map(x => EntityMatching.profileMatching(x._1, x._2, MatchingFunctions.jaccardSimilarity))
     //entity clustering
     val connected = EntityClusterUtils.connectedComponents(weRdd)
