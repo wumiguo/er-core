@@ -4,10 +4,10 @@ import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.similarityjoins.datastructure.Qgram
 
 /**
- * @author levinliu
- * Created on 2020/6/11
- *         (Change file header on Settings -> Editor -> File and Code Templates)
- */
+  * @author levinliu
+  *         Created on 2020/6/11
+  *         (Change file header on Settings -> Editor -> File and Code Templates)
+  */
 object CommonEdFunctions {
   object commons {
     def fixPrefix: (Int, Int) = (-1, -1)
@@ -34,13 +34,16 @@ object CommonEdFunctions {
 
   /**
     * Dati i documenti trasformati in q-grammi calcola la document frequency per ogni qgramma
+    * Term frequency of each q-gram
     **/
   def getQgramsTf(docs: RDD[(Int, Array[(String, Int)])]): Map[String, Int] = {
+    //output [se,el,lf,el...]
     val allQgrams = docs.flatMap { case (docId, qgrams) =>
       qgrams.map { case (str, pos) =>
         str
       }
     }
+    //output [(se,1),(el,2),(lf,1)...]
     allQgrams.groupBy(x => x).map(x => (x._1, x._2.size)).collectAsMap().toMap
   }
 
@@ -57,9 +60,17 @@ object CommonEdFunctions {
   }
 
   def getSortedQgrams2(docs: RDD[(Int, String, Array[(String, Int)])]): RDD[(Int, String, Array[(Int, Int)])] = {
+    //output [(be,2),(cd,2),(ks,158)...] not ordered
     val tf = getQgramsTf(docs.map(x => (x._1, x._3)))
-    val tf2 = docs.context.broadcast(tf.toList.sortBy(_._2).zipWithIndex.map(x => (x._1._1, x._2)).toMap)
+    //output {token:token id also index of tokens order by term frequency,...}
+    // {"xy":1,"bc":2,"ab":3,...}
+    val tf2 = docs.context.broadcast(
+      //sort by term frequency increasing(idf decreasing)
+      tf.toList.sortBy(_._2).
+        zipWithIndex.map(x => (x._1._1, x._2)).toMap)
     docs.map { case (docId, doc, qgrams) =>
+      //output [(tokenId,token position of q-gram)]
+      //[(617,28).(641,29),(726,25)...]
       val sortedQgrams = qgrams.map(q => (tf2.value(q._1), q._2)).sortBy(q => q)
       (docId, doc, sortedQgrams)
     }

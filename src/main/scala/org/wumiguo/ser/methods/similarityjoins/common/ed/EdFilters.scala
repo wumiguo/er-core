@@ -16,7 +16,9 @@ object EdFilters {
     * Implementa il common filter
     * restituisce true se i due documenti hanno sufficienti q-grammi in comune per poter passare l'edit distance
     * richiesta
-    **/
+    *
+    * it's count filtering
+    */
   def commonFilter(d1: Array[(Int, Int)], d2: Array[(Int, Int)], qgramLength: Int, threshold: Int): Boolean = {
     var pass = true
     val minCommon = (Math.max(d1.length, d2.length) - qgramLength + 1) - (qgramLength * threshold)
