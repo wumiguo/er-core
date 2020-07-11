@@ -37,8 +37,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val dataset2Format = getParameter(args, "dataset2-format", "json")
     val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
     val attributes2 = getParameter(args, "attributes2", "title")
+    val q = getParameter(args, "q", "2")
+    val threshold = getParameter(args, "threshold", "2")
 
-    val algorithm = getParameter(args, "algorithm", "EDJoin")
+    val algorithm = getParameter(args, "algorithm", "PartEnum")
 
     val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
       Option(attributes1).map(_.split(",")).orNull)
@@ -68,22 +70,22 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     }
 
     val t1 = Calendar.getInstance().getTimeInMillis
-    var attributesMatches = new ArrayBuffer[RDD[(Int, Int)]]()
+    var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
     var attributeses = ArrayBuffer[RDD[(Int, String)]]()
     attributesArray.foreach(attributesTuple => {
       val attributes1 = attributesTuple._1
       val attributes2 = attributesTuple._2
-      val attributesMatch: RDD[(Int, Int)] =
+      val attributesMatch: RDD[(Int, Int, Double)] =
         algorithm match {
           case "EDJoin" =>
             val attributes = attributes1.union(attributes2)
             attributeses += attributes
             attributes.cache()
-            EDJoin.getMatches(attributes, 2, 2)
+            EDJoin.getMatches(attributes, q.toInt, threshold.toInt)
           case "PartEnum" =>
             attributes1.cache()
             attributes2.cache()
-            PartEnum.getMatches(attributes1, attributes2, 2, 2, 0.8)
+            PartEnum.getMatches(attributes1, attributes2, 0.9)
         }
       attributesMatches += attributesMatch
     })
