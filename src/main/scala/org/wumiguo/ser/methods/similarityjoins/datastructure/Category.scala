@@ -40,9 +40,6 @@ class Category extends Serializable {
       throw new RuntimeException("N1 * N2 is not more than K + 1,consider to adjust the N1 and N2")
     }
 
-    //    val n: Int = N2
-    //    val k: Int = N2 - K2
-
   }
 
 

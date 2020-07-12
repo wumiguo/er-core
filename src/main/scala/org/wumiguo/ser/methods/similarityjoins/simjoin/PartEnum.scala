@@ -13,55 +13,61 @@ object PartEnum {
   private val MAX_LEN = 3300 // the max size of the candidate string
   private val MAX_CATEGORY = 100 // max slice of the string, usually won't reach this limit
 
-  def getHelpers(threshold: Double): ArrayBuffer[Category] = {
-    val helper = ArrayBuffer[Category]()
+  def getCategories(threshold: Double, maxLen: Int): ArrayBuffer[Category] = {
+    val categories = ArrayBuffer[Category]()
     var len = 1
 
     breakable {
       for (k <- 0 until MAX_CATEGORY) {
-        helper += new Category(len, threshold)
-        len = helper(k).e_len + 1
-        if (len > MAX_LEN)
+        categories += new Category(len, threshold)
+        len = categories(k).e_len + 1
+        if (len > maxLen)
           break
       }
     }
 
-    helper
+    categories
   }
 
   def tokenize(documents: RDD[(Int, String)]): RDD[(Int, String, Array[String])] = {
-    documents.map(t => (t._1, t._2, t._2.toLowerCase.split("[\\W_]")))
+    documents.map(t => (t._1, t._2, t._2.toLowerCase.split("[\\W_]").filter(!_.isEmpty)))
   }
 
-  def sizeBasedFiltering(tokens: RDD[(Int, String, Array[String])], helpers: ArrayBuffer[Category]): RDD[(Int, Iterable[(Int, Int, String, Array[String])])] = {
-    val categoryAndTokens = tokens.map {
-      case token => {
-        var categoryIndex = -1
-        breakable {
-          for (i <- 0 until helpers.length) {
-            val helper = helpers(i)
-            if (helper.s_len >= token._3.length && helper.e_len <= token._3.length) {
-              categoryIndex = i
-              break
-            }
+  def sizeBasedFiltering(tokens: RDD[(Int, String, Array[String])], categories: ArrayBuffer[Category]): RDD[(Int, Iterable[(Int, Int, String, Array[String])])] = {
+    val categoryAndTokens: RDD[(Int, Int, String, Array[String])] = tokens.map(token => {
+      var categoryIndex = -1
+      breakable {
+        for (i <- 0 until categories.length) {
+          val helper = categories(i)
+          if (token._3.length >= helper.s_len && token._3.length <= helper.e_len) {
+            categoryIndex = i
+            break
           }
         }
-        //categoryIndex,recordId,attribute,tokens
-        (categoryIndex, token._1, token._2, token._3)
       }
-    }
+      //categoryIndex,recordId,attribute,tokens
+      (categoryIndex, token._1, token._2, token._3)
+    })
 
-    categoryAndTokens.union(categoryAndTokens.map(t => (t._1 - 1, t._2, t._3, t._4))).groupBy(_._1).map(t =>
-      //categoryIndex, tokens
-      (t._1, t._2)
-    ).filter(_._1 > 0)
+    categoryAndTokens.groupBy(_._1).leftOuterJoin(categoryAndTokens.map(t => (t._1 - 1, t._2, t._3, t._4)).groupBy(_._1))
+      .map(t => {
+        val tokens: Iterable[(Int, Int, String, Array[String])] = t._2._1
+        val anotherTokens: Iterable[(Int, Int, String, Array[String])] = t._2._2.orNull
+        val mergedTokens = new ArrayBuffer[(Int, Int, String, Array[String])]()
+        tokens.foreach(mergedTokens += _)
+        if (anotherTokens != null) {
+          anotherTokens.foreach(mergedTokens += _)
+        }
+
+        (t._1, mergedTokens.distinct)
+      })
   }
 
 
   def getCandidates(documents: RDD[(Int, String)], threshold: Double): RDD[((Int, Int, String, Array[String]), (Int, Int, String, Array[String]))] = {
     val tokens = tokenize(documents)
-    val helpers: ArrayBuffer[Category] = getHelpers(threshold)
-    val groupedCandidates = sizeBasedFiltering(tokens, helpers)
+    val categories: ArrayBuffer[Category] = getCategories(threshold, MAX_LEN)
+    val groupedCandidates = sizeBasedFiltering(tokens, categories)
 
     groupedCandidates.join(groupedCandidates).flatMap(t => {
       var count = -1l
