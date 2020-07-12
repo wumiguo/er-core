@@ -17,7 +17,7 @@ import org.wumiguo.ser.methods.util.Converters
 object End2EndSimpleFlow extends ERFlow with SparkEnvSetup {
   //val log = LoggerFactory.getLogger(getClass.getName)
 
-  def run: Unit = {
+   def run(args: Array[String]) = {
     //data reading
     val spark = createLocalSparkSession(getClass.getName)
     log.info("launch full end2end flow")
@@ -81,4 +81,5 @@ object End2EndSimpleFlow extends ERFlow with SparkEnvSetup {
     //val lessThan20 = connected.filter(x => x._3 < 0.2)
     spark.close()
   }
+
 }

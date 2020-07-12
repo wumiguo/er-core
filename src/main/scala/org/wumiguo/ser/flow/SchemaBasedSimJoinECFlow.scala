@@ -15,13 +15,13 @@ import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * @author johnli
-  *         Created on 2020/6/18
-  *         (Change file header on Settings -> Editor -> File and Code Templates)
-  */
+ * @author johnli
+ *         Created on 2020/6/18
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ */
 object SchemaBasedSimJoinECFlow extends ERFlow {
 
-  def main(args: Array[String]): Unit = {
+  override def run(args: Array[String]): Unit = {
     val conf = new SparkConf()
       .setAppName("SchemaBasedSimJoinECFlow")
       .setMaster("local[*]")
@@ -80,10 +80,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
             attributeses += attributes
             attributes.cache()
             EDJoin.getMatches(attributes, 2, 2)
-//          case "PartEnum" =>
-//            attributes1.cache()
-//            attributes2.cache()
-//            PartEnum.getMatches(attributes1, attributes2, 2, 2, 0.8)
+          //          case "PartEnum" =>
+          //            attributes1.cache()
+          //            attributes2.cache()
+          //            PartEnum.getMatches(attributes1, attributes2, 2, 2, 0.8)
         }
       attributesMatches += attributesMatch
     })
@@ -128,4 +128,5 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     else
       defaultValue
   }
+
 }
