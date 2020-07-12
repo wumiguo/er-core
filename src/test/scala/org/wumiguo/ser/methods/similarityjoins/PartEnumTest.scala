@@ -79,4 +79,52 @@ class PartEnumTest extends FlatSpec with SparkEnvSetup {
     )
   }
 
+  it should "getCandidates will get the candidate after filtering" in {
+    val documents = spark.sparkContext.parallelize(Seq(
+      (0, "3 length candidate"),
+      (1, "4 length candidate 1"),
+      (2, "7 length candidate 1 2 3 4"),
+      (3, "8 length candidate 1 2 3 4 5"),
+      (4, "10 length candidate 1 2 3 4 5 6 7"),
+      (5, "12 length candidate 1 2 3 4 5 6 7 8 9"),
+      (6, "20 length candidate 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17"),
+      (7, "another 20 length candidate 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16")
+    ))
+
+    val candidates = PartEnum.getCandidates(documents, 0.9)
+
+    assertResult(
+      Array(
+        ((0, "3 length candidate"), (1, "4 length candidate 1")),
+        ((2, "7 length candidate 1 2 3 4"), (3, "8 length candidate 1 2 3 4 5")),
+        ((3, "8 length candidate 1 2 3 4 5"), (4, "10 length candidate 1 2 3 4 5 6 7")),
+        ((4, "10 length candidate 1 2 3 4 5 6 7"), (5, "12 length candidate 1 2 3 4 5 6 7 8 9")),
+        ((6, "20 length candidate 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17"), (7, "another 20 length candidate 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16")))
+    )(
+      candidates.sortBy(_._1._2).map(t => ((t._1._2, t._1._3), (t._2._2, t._2._3))).collect
+    )
+  }
+
+
+  it should "getMatch will get the candidate after filtering" in {
+    val documents1 = spark.sparkContext.parallelize(Seq(
+      (0, "jaccard is larger than 0.7 in document1"),
+      (1, "jaccard is larger than 0.7 in document1 2"),
+      (2, "this one will not be match")
+    ))
+
+    val documents2 = spark.sparkContext.parallelize(Seq(
+      (100, "jaccard is larger than 0.7 in document2"),
+      (101, "jaccard is larger than 0.7 in document2 2")
+    ))
+
+    val matchedPairs = PartEnum.getMatches(documents1, documents2, 0.7)
+
+    assertResult(
+      Array((0, 1), (0, 100), (0, 101), (1, 100), (1, 101), (100, 101))
+    )(
+      matchedPairs.sortBy(_._1).map(t => (t._1, t._2)).collect.distinct
+    )
+  }
+
 }

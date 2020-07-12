@@ -68,8 +68,8 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
       ))
     val results = EDJoin.getMatches(docs, 3, 1).collect
     assertResult(
-      Array((3, 4), (1, 2), (5, 6))
-    )(results)
+      Array((1, 2, 1.0), (3, 4, 1.0), (5, 6, 1.0))
+    )(results.sortBy(_._1))
   }
 
   it should "getMatches should not match string within edit distance is 2 when the threadhold is 1" in {
