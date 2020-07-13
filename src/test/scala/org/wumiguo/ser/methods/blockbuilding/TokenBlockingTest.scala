@@ -208,5 +208,6 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     assert(exp.entropy == output.entropy)
     assert(exp.profiles.toList == output.profiles.toList)
     assert(exp.getComparisons() == output.getComparisons())
+    assert(1 == output.getComparisonSize())
   }
 }

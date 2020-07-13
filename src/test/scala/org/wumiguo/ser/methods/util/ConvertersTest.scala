@@ -56,6 +56,7 @@ class ConvertersTest extends FlatSpec with SparkEnvSetup {
     val profileBlocks = Converters.blocksToProfileBlocks(blocks)
     profileBlocks.foreach(x => println("pb:" + x))
     val sorted = profileBlocks.sortBy(_.profileID)
+    //3*3
     assertResult(ProfileBlocks(1, Set(BlockWithComparisonSize(12, 9.0))))(sorted.first())
   }
 }

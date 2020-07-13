@@ -53,8 +53,8 @@ object End2EndSimpleFlow extends ERFlow with SparkEnvSetup {
     log.info("pb-detail-bb count1 " + profileBlocks1.count() + " count2 " + profileBlocks2.count())
     log.info("pb-detail-bb first1 " + profileBlocks1.first() + " first2 " + profileBlocks2.first())
     //block cleaning
-    val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks1, r = 0.5)
-    val profileBlockFilter2 = BlockFiltering.blockFiltering(profileBlocks2, r = 0.5)
+    val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks1, ratio = 0.5)
+    val profileBlockFilter2 = BlockFiltering.blockFiltering(profileBlocks2, ratio = 0.5)
     log.info("pb-detail-bf count1 " + profileBlockFilter1.count() + " count2 " + profileBlockFilter2.count())
     log.info("pb-detail-bf first1 " + profileBlockFilter1.first() + " first2 " + profileBlockFilter2.first())
     //comparision cleaning
