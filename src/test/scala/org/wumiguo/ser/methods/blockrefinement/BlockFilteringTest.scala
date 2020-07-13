@@ -11,6 +11,7 @@ import org.wumiguo.ser.methods.datastructure.{BlockWithComparisonSize, ProfileBl
  */
 class BlockFilteringTest extends FlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(this.getClass.getName)
+
   it should "filtering block " in {
     val profileBlocks = spark.sparkContext.parallelize(Seq(
       ProfileBlocks(1, Set(BlockWithComparisonSize(91, 12.0), BlockWithComparisonSize(11, 2.0), BlockWithComparisonSize(21, 6.0), BlockWithComparisonSize(111, 4.0))),

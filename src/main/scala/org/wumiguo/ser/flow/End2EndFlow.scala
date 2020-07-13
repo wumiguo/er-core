@@ -20,7 +20,8 @@ import org.wumiguo.ser.methods.util.Converters
 object End2EndFlow extends ERFlow with SparkEnvSetup {
   //val log = LoggerFactory.getLogger(getClass.getName)
 
-  def run: Unit = {
+
+  override def run(args: Array[String]): Unit = {
     //data reading
     val spark = createLocalSparkSession(getClass.getName)
     log.info("launch full end2end flow")
