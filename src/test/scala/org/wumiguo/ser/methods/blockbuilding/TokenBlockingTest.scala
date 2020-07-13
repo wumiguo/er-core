@@ -79,6 +79,15 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
     val first = result.take(1).head
     assert(Set(0, 10, 11) == first)
   }
+  it should "separateProfiles2" in {
+    val input = Set[Int](0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 10, 12, 100, 101, 120, 3)
+    val separators = Array[Int](11, 33, 55)
+    val result = TokenBlocking.separateProfiles(input, separators)
+    result.foreach(x => println("result is = " + x))
+    assert(4 == result.length)
+    val first = result.take(1).head
+    assert(Set(0, 10, 3, 11) == first)
+  }
 
   it should "createBlocksCluster " in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
@@ -170,24 +179,26 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
   it should "createBlocksCluster v6 with data from 2 data source(sourceID) " in {
     val attrs1 = mutable.MutableList[KeyValue](KeyValue("title", "helloworld"), KeyValue("author", "lev"))
     val attrs2 = mutable.MutableList[KeyValue](KeyValue("title", "hello world"), KeyValue("author", "liu"))
-    val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("postBy", "liu"))
-    val attrs4 = mutable.MutableList[KeyValue](KeyValue("title", "bigdata tech"), KeyValue("author", "liu"))
-    val attrs5 = mutable.MutableList[KeyValue](KeyValue("title", "data tech"), KeyValue("author", "levin"))
+    val attrs3 = mutable.MutableList[KeyValue](KeyValue("title", "BigData Tech"), KeyValue("author", "liu"))
+    val attrs4 = mutable.MutableList[KeyValue](KeyValue("title", "bigdata tech"), KeyValue("postBy", "liu"))
+    val attrs5 = mutable.MutableList[KeyValue](KeyValue("title", "data tech"), KeyValue("postBy", "levin"))
+    val attrs6 = mutable.MutableList[KeyValue](KeyValue("title", "hello tech"), KeyValue("postBy", "liu"))
     val p1 = Profile(1, attrs1, "jaOkd", 102)
-    val p2 = Profile(2, attrs2, "Uja2d", 103)
-    val p3 = Profile(3, attrs3, "Xlal3", 102)
-    val p4 = Profile(4, attrs4, "Ulo04", 103)
-    val p5 = Profile(5, attrs5, "Ulo05", 102)
+    val p2 = Profile(2, attrs2, "Uja2d", 102)
+    val p3 = Profile(3, attrs3, "Ulo03", 102)
+    val p4 = Profile(4, attrs4, "Xlal4", 103)
+    val p5 = Profile(5, attrs5, "Ulo05", 103)
+    val p6 = Profile(6, attrs6, "UlA06", 103)
     val rdd = spark.sparkContext.parallelize(Seq(
-      p1, p2, p3, p4, p5
+      p1, p2, p3, p4, p5, p6
     ))
-    val separators = Array[Int](6)
+    val separators = Array[Int](3)
     var clusters = List[KeysCluster]()
-    clusters = KeysCluster(1000, List("name", "nome")) :: clusters
-    clusters = KeysCluster(111, List("102_title")) :: clusters
-    clusters = KeysCluster(22, List("102_author", "102_postBy")) :: clusters
+    clusters = KeysCluster(111, List("102_title", "103_title")) :: clusters
+    clusters = KeysCluster(22, List("102_author", "103_postBy")) :: clusters
     val blockRdd = TokenBlocking.createBlocksCluster(rdd, separators, clusters)
     blockRdd.foreach(x => println("block : " + x))
-    assertResult(0)(blockRdd.count())
+    assertResult(4)(blockRdd.count())
+    assertResult(BlockClean(0, Array[Set[Int]](Set(3), Set(4))), 1.0, 111, "bigdata_111")(blockRdd.sortBy(_.blockID).first())
   }
 }

@@ -13,9 +13,7 @@ class BlockingUtilsSpec extends FlatSpec {
     val out = BlockingUtils.associateKeysToProfileID(profileEntryKeys)
     assert(out.size == 5)
     out.foreach(t => println("data1 is " + t._1 + " , " + t._2))
-    var sorted = out.toList.sortBy(_._1)
-    //val sorted: Seq[Tuple2.type] = out.asInstanceOf[Seq[Tuple2.type]]
-    println(sorted)
+    val sorted = out.toList.sortBy(_._1)
     assertResult(sorted.head)(("ER", 1))
   }
   it should "(Int,Seq) to Iterable(String,VectorOfLetter)" in {

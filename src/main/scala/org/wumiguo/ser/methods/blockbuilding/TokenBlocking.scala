@@ -204,7 +204,7 @@ object TokenBlocking {
     val entropies = clusters.map(cluster => (cluster.id, cluster.entropy)).toMap
     /** Creates a map that map each key of a cluster to it id */
     val clusterMap = clusters.flatMap(c => c.keys.map(key => (key, c.id))).toMap
-    /* Generates the tokens for each profile */
+    //e.g. tokensPerProfile = [ (1,(hello_111,lev_22)) ... ]
     val tokensPerProfile = profiles.map {
       profile =>
         /* Calculates the dataset to which this token belongs */
@@ -227,7 +227,6 @@ object TokenBlocking {
 
         (profile.id, tokens.distinct)
     }
-
     /* Associate each profile to each token, produces (tokenID, [list of profileID]) */
     val profilePerKey = {
       if (excludeDefaultCluster) {
@@ -237,11 +236,10 @@ object TokenBlocking {
         tokensPerProfile.flatMap(BlockingUtils.associateKeysToProfileID).groupByKey()
       }
     }
-
     /* For each tokens divides the profiles in two lists according to the original datasets where they come (in case of Clean-Clean) */
     val profilesGrouped = profilePerKey map {
       case (blockingKey, entityIds) =>
-        println("bk entityIds = " + blockingKey+ "," +entityIds.toList)
+        //println("bk entityIds = " + blockingKey+ "," +entityIds.toList)
         val blockEntities = {
           if (separatorIDs.isEmpty) {
             Array(entityIds.toSet)
