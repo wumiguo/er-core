@@ -27,8 +27,8 @@ class BlockPurgingTest extends FlatSpec with SparkEnvSetup {
 
   it should "calcMaxComparisonNumber v1" in {
     var input = Array[(Double, (Double, Double))]()
-    input +:= (0.8, (0.1, 0.2))
-    input +:= (0.5, (0.2, 0.2))
+    input +:= (0.8, (1.0, 10.0))
+    input +:= (0.5, (2.0, 20.0))
     val smoothFactor = 0.5
     val max = BlockPurging.calcMaxComparisonNumber(input, smoothFactor)
     assert(0.8 == max)
