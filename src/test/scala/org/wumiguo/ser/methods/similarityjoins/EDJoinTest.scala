@@ -68,7 +68,7 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
       ))
     val results = EDJoin.getMatches(docs, 3, 1).collect
     assertResult(
-      List((1, 2), (3, 4), (5, 6))
+      Array((1, 2, 1.0), (3, 4, 1.0), (5, 6, 1.0))
     )(results.sortBy(_._1))
   }
 

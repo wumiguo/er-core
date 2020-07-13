@@ -203,7 +203,7 @@ object EDJoin {
     candidates
   }
 
-  def getMatches(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int)] = {
+  def getMatches(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
 
     val t1 = Calendar.getInstance().getTimeInMillis
     val candidates = getCandidates(documents, qgramLength, threshold)
@@ -211,9 +211,9 @@ object EDJoin {
 
     val t2 = Calendar.getInstance().getTimeInMillis
 
-    val m = candidates
-      .filter { case ((d1Id, d1), (d2Id, d2)) => CommonEdFunctions.editDist(d1, d2) <= threshold }
-      .map { case ((d1Id, d1), (d2Id, d2)) => (d1Id, d2Id) }
+    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
+      .filter(_._3 >= threshold)
+      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
     val nm = m.count()
     val t3 = Calendar.getInstance().getTimeInMillis
