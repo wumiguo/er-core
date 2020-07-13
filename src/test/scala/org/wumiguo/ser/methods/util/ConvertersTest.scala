@@ -35,11 +35,27 @@ class ConvertersTest extends FlatSpec with SparkEnvSetup {
     assertResult((11, BlockWithComparisonSize(99, 9.0)))(pb2)
   }
 
-  it should "blocksToProfileBlocks" in {
-    val blocks: RDD[BlockAbstract] = spark.sparkContext.parallelize(Seq(BlockDirty(99, Array[Set[Int]](Set[Int](11, 12, 15, 16)), 0.91, 5555)))
+  it should "blocksToProfileBlocks v1" in {
+    val blocks: RDD[BlockAbstract] = spark.sparkContext.parallelize(Seq(BlockDirty(12, Array[Set[Int]](Set[Int](1, 3, 5)), 0.91, 5555)))
     val profileBlocks = Converters.blocksToProfileBlocks(blocks)
     profileBlocks.foreach(x => println("pb:" + x))
     val sorted = profileBlocks.sortBy(_.profileID)
-    assertResult(ProfileBlocks(11, Set(BlockWithComparisonSize(99, 12.0))))(sorted.first())
+    assertResult(ProfileBlocks(1, Set(BlockWithComparisonSize(12, 6.0))))(sorted.first())
+  }
+
+  it should "blocksToProfileBlocks v2" in {
+    val blocks: RDD[BlockAbstract] = spark.sparkContext.parallelize(Seq(BlockClean(12, Array[Set[Int]](Set[Int](1, 3, 5)), 0.91, 5555)))
+    val profileBlocks = Converters.blocksToProfileBlocks(blocks)
+    profileBlocks.foreach(x => println("pb:" + x))
+    val sorted = profileBlocks.sortBy(_.profileID)
+    assertResult(ProfileBlocks(1, Set(BlockWithComparisonSize(12, 0.0))))(sorted.first())
+  }
+
+  it should "blocksToProfileBlocks v3" in {
+    val blocks: RDD[BlockAbstract] = spark.sparkContext.parallelize(Seq(BlockClean(12, Array[Set[Int]](Set[Int](1, 3, 5), Set[Int](2, 4, 5)), 0.91, 5555)))
+    val profileBlocks = Converters.blocksToProfileBlocks(blocks)
+    profileBlocks.foreach(x => println("pb:" + x))
+    val sorted = profileBlocks.sortBy(_.profileID)
+    assertResult(ProfileBlocks(1, Set(BlockWithComparisonSize(12, 9.0))))(sorted.first())
   }
 }

@@ -48,17 +48,17 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     clusters = KeysCluster(100114, List(sourceId1 + "_venue", sourceId2 + "_venue")) :: clusters
     //    TokenBlocking.createBlocksCluster()
     val epBlocks = TokenBlocking.createBlocksCluster(allEPRdd, separators, clusters)
-    log.info("pb-detail-bc count1 " + epBlocks.count() + " first " + epBlocks.first())
+    log.info("pb-detail-bc count " + epBlocks.count() + " first " + epBlocks.first())
     epBlocks.top(5).foreach(b => log.info("ep1b is {}", b))
     val profileBlocks = Converters.blocksToProfileBlocks(epBlocks)
-    log.info("pb-detail-bb count1 " + profileBlocks.count() + " first " + profileBlocks.first())
+    log.info("pb-detail-bb count " + profileBlocks.count() + " first " + profileBlocks.first())
     //block cleaning
     val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks, r = 0.5)
-    log.info("pb-detail-bf count1 " + profileBlockFilter1.count() + " first1 " + profileBlockFilter1.first())
+    log.info("pb-detail-bf count " + profileBlockFilter1.count() + " first1 " + profileBlockFilter1.first())
     //comparision cleaning
     val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1)
     val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)
-    log.info("pb-detail-bp count1 " + pAbRdd1.count() + " count2 " + pAbRdd1.first())
+    log.info("pb-detail-bp count " + pAbRdd1.count() + " count2 " + pAbRdd1.first())
     //entity matching
     val broadcastVar = spark.sparkContext.broadcast(ep1Rdd.collect())
     val combinedRdd = ep2Rdd.flatMap(p2 => broadcastVar.value.map(p1 => (p1, p2)))
