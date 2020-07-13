@@ -30,10 +30,10 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
     val gtRdd = CSVLoader.loadGroundTruth(gtPath)
     log.info("gt size is {}", gtRdd.count())
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.gen.csv").getPath
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = 1001)
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = 1001)
     log.info("ep1 size is {}", ep1Rdd.count())
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.gen.csv").getPath
-    val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = 2002)
+    val ep2Rdd = CSVLoader.loadProfilesAdvanceMode(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = 2002)
     log.info("ep2 size is {}", ep2Rdd.count())
     //build blocks
     val separators = Array[Int]()

@@ -63,7 +63,7 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
       ("I", 10)))
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
     println("ep1Rdd size = " + ep1Rdd.count())
     val blockRdd = TokenBlocking.createBlocks(ep1Rdd)
     println("blocks size = " + blockRdd.count())
@@ -83,7 +83,7 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
   it should "createBlocksCluster " in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
     ep1Rdd.foreach(x => println("ep1Rdd : " + x))
     val separators = Array[Int](11, 33, 55)
     var clusters = List[KeysCluster]()
@@ -95,7 +95,7 @@ class TokenBlockingTest extends FlatSpec with SparkEnvSetup {
   it should "createBlocksCluster v2 " in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
     ep1Rdd.foreach(x => println("ep1Rdd : " + x))
     val separators = Array[Int]()
     var clusters = List[KeysCluster]()

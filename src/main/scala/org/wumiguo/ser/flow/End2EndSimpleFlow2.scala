@@ -28,10 +28,10 @@ object End2EndSimpleFlow2 extends ERFlow with SparkEnvSetup {
     val sourceId1 = 1001
     val sourceId2 = 1002
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.gen.csv").getPath
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = sourceId1)
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = sourceId1)
     log.info("ep1 size is {}", ep1Rdd.count())
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.gen.csv").getPath
-    val ep2Rdd = CSVLoader.loadProfiles2(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = sourceId2)
+    val ep2Rdd = CSVLoader.loadProfilesAdvanceMode(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = sourceId2)
     log.info("ep2 size is {}", ep2Rdd.count())
     //entity matching
     val broadcastVar = spark.sparkContext.broadcast(ep1Rdd.collect())

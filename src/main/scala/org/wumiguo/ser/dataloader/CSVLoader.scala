@@ -17,7 +17,7 @@ object CSVLoader {
    * Load the profiles from a CSV file.
    **/
   def loadProfiles(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int = 0): RDD[Profile] = {
-    loadProfiles2(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId)
+    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId)
   }
 
   /**
@@ -32,8 +32,8 @@ object CSVLoader {
    *                           The default value is false.
    * @param innerSeparator     if the parameter explodeInnerFields is true, specify the values separator.
    **/
-  def loadProfiles2(filePath: String, startIDFrom: Int = 0, separator: String = ",", header: Boolean = false,
-                    explodeInnerFields: Boolean = false, innerSeparator: String = ",", realIDField: String = "", sourceId: Int = 0): RDD[Profile] = {
+  def loadProfilesAdvanceMode(filePath: String, startIDFrom: Int = 0, separator: String = ",", header: Boolean = false,
+                              explodeInnerFields: Boolean = false, innerSeparator: String = ",", realIDField: String = "", sourceId: Int = 0): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
     val df = sparkSession.read.option("header", header).option("sep", separator).option("delimiter", "\"").csv(filePath)
     val columnNames = df.columns

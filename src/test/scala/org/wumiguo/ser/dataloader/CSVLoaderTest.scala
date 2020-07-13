@@ -60,7 +60,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
   it should "load 15 entity profiles with header" in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true)
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true)
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
     assert(15 == ep1Rdd.count())
@@ -75,7 +75,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
   it should "load 15 entity profiles with header and id column" in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfiles2(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
     assert(15 == ep1Rdd.count())
