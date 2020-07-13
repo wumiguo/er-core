@@ -7,19 +7,23 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.wumiguo.ser.dataloader.JSONWrapper
 import org.wumiguo.ser.entity.parameter.DatasetConfig
-import org.wumiguo.ser.methods.datastructure.WeightedEdge
+import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
+import org.wumiguo.ser.methods.util.CommandLineUtil
 
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * @author johnli
- *         Created on 2020/6/18
- *         (Change file header on Settings -> Editor -> File and Code Templates)
- */
+  * @author johnli
+  *         Created on 2020/6/18
+  *         (Change file header on Settings -> Editor -> File and Code Templates)
+  */
 object SchemaBasedSimJoinECFlow extends ERFlow {
+
+  private val ALGORITHM_EDJOIN = "EDJoin"
+  private val ALGORITHM_PARTENUM = "PartEnum"
 
   override def run(args: Array[String]): Unit = {
     val conf = new SparkConf()
@@ -29,18 +33,18 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
       .set("spark.local.dir", "/data2/tmp")
 
     var context = new SparkContext(conf)
-    val dataset1Path = getParameter(args, "dataset1", "datasets\\clean\\DblpAcm\\dataset1.json")
-    val dataset1Format = getParameter(args, "dataset1-format", "json")
-    val dataset1Id = getParameter(args, "dataset1-id", "realProfileID")
-    val attributes1 = getParameter(args, "attributes1", "title")
-    val dataset2Path = getParameter(args, "dataset2", "datasets\\clean\\DblpAcm\\dataset2.json")
-    val dataset2Format = getParameter(args, "dataset2-format", "json")
-    val dataset2Id = getParameter(args, "dataset2-id", "realProfileID")
-    val attributes2 = getParameter(args, "attributes2", "title")
-    val q = getParameter(args, "q", "2")
-    val threshold = getParameter(args, "threshold", "2")
+    val dataset1Path = CommandLineUtil.getParameter(args, "dataset1", "datasets\\clean\\DblpAcm\\dataset1.json")
+    val dataset1Format = CommandLineUtil.getParameter(args, "dataset1-format", "json")
+    val dataset1Id = CommandLineUtil.getParameter(args, "dataset1-id", "realProfileID")
+    val attributes1 = CommandLineUtil.getParameter(args, "attributes1", "title")
+    val dataset2Path = CommandLineUtil.getParameter(args, "dataset2", "datasets\\clean\\DblpAcm\\dataset2.json")
+    val dataset2Format = CommandLineUtil.getParameter(args, "dataset2-format", "json")
+    val dataset2Id = CommandLineUtil.getParameter(args, "dataset2-id", "realProfileID")
+    val attributes2 = CommandLineUtil.getParameter(args, "attributes2", "title")
+    val q = CommandLineUtil.getParameter(args, "q", "2")
+    val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
 
-    val algorithm = getParameter(args, "algorithm", "PartEnum")
+    val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
 
     val dataset1 = new DatasetConfig(dataset1Path, dataset1Format, dataset1Id,
       Option(attributes1).map(_.split(",")).orNull)
@@ -56,7 +60,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.addAppender(appender)
 
     val profiles1 = JSONWrapper.loadProfiles(dataset1.path, realIDField = dataset1.dataSetId)
-    val profiles2 = JSONWrapper.loadProfiles(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue())
+    val profiles2 = JSONWrapper.loadProfiles(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
 
     assert(dataset2.path == null || dataset1.attribute.length == dataset2.attribute.length,
       "If dataset 2 exist, the number of attribute use to compare between dataset 1 and dataset 2 should be equal")
@@ -77,15 +81,16 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
       val attributes2 = attributesTuple._2
       val attributesMatch: RDD[(Int, Int, Double)] =
         algorithm match {
-          case "EDJoin" =>
+          case ALGORITHM_EDJOIN =>
             val attributes = attributes1.union(attributes2)
             attributeses += attributes
             attributes.cache()
             EDJoin.getMatches(attributes, q.toInt, threshold.toInt)
-          case "PartEnum" =>
-            attributes1.cache()
-            attributes2.cache()
-            PartEnum.getMatches(attributes1, attributes2, 0.9)
+          case ALGORITHM_PARTENUM =>
+            val attributes = attributes1.union(attributes2)
+            attributeses += attributes
+            attributes.cache()
+            PartEnum.getMatches(attributes, threshold.toDouble)
         }
       attributesMatches += attributesMatch
     })
@@ -121,14 +126,37 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     log.info("[EDJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
 
     log.info("[EDJoin] Total time (s) " + (t4 - t1) / 1000.0)
+
+    val matchedPairs = clusters.map(_._2).flatMap(idSet => {
+      val pairs = new ArrayBuffer[(Int, Int)]()
+      val idArray = idSet.toArray
+      for (i <- 0 until idArray.length) {
+        val target: Int = idArray(i)
+        for (j <- i + 1 until idArray.length) {
+          val source = idArray(j)
+          pairs += ((target, source))
+        }
+      }
+      pairs
+    })
+
+    val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles)
+
+    val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+    println(matchesInDiffDataSet.count())
+    matchesInDiffDataSet.foreach(t => println(
+      (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId))))
+
+    log.info("[EDJoin] Completed")
   }
 
-  def getParameter(args: Array[String], name: String, defaultValue: String = null): String = {
-    var parameterPair = args.find(_.startsWith(name + "=")).orNull
-    if (null != parameterPair)
-      parameterPair.split("=")(1)
-    else
-      defaultValue
+  def mapMatchesWithProfiles(matchedPairs: RDD[(Int, Int)], profiles: RDD[Profile]): RDD[(Profile, Profile)] = {
+    val profilesById = profiles.keyBy(_.id)
+
+    matchedPairs.keyBy(_._1).
+      join(profilesById).
+      map(t => (t._2._1._2, t._2._2)).keyBy(_._1).
+      join(profilesById).map(t => (t._2._1._2, t._2._2))
   }
 
 }

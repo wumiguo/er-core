@@ -118,7 +118,7 @@ class PartEnumTest extends FlatSpec with SparkEnvSetup {
       (101, "jaccard is larger than 0.7 in document2 2")
     ))
 
-    val matchedPairs = PartEnum.getMatches(documents1, documents2, 0.7)
+    val matchedPairs = PartEnum.getMatches(documents1.union(documents2), 0.7)
 
     assertResult(
       Array((0, 1), (0, 100), (0, 101), (1, 100), (1, 101), (100, 101))
