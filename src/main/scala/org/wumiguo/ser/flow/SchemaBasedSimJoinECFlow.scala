@@ -5,7 +5,7 @@ import java.util.Calendar
 import org.apache.log4j.{FileAppender, Level, LogManager, SimpleLayout}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.wumiguo.ser.dataloader.JSONWrapper
+import org.wumiguo.ser.dataloader.{JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.entity.parameter.DatasetConfig
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
@@ -59,8 +59,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val appender = new FileAppender(layout, logPath, false)
     log.addAppender(appender)
 
-    val profiles1 = JSONWrapper.loadProfiles(dataset1.path, realIDField = dataset1.dataSetId)
-    val profiles2 = JSONWrapper.loadProfiles(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
+    def profileLoader: ProfileLoaderTrait = getProfileLoader(dataset1.path)
+
+    val profiles1 = profileLoader.load(dataset1.path, realIDField = dataset1.dataSetId, startIDFrom = 0, sourceId = 0)
+    val profiles2 = profileLoader.load(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
 
     assert(dataset2.path == null || dataset1.attribute.length == dataset2.attribute.length,
       "If dataset 2 exist, the number of attribute use to compare between dataset 1 and dataset 2 should be equal")
@@ -97,7 +99,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
 
     val t2 = Calendar.getInstance().getTimeInMillis
 
-    log.info("[EDJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
+    log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
 
     var matches = attributesMatches(0);
 
@@ -114,18 +116,18 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
       Option(attributesTuple._2).map(_.unpersist())
     })
     attributeses.foreach(_.unpersist())
-    log.info("[EDJoin] Number of matches " + nm)
-    log.info("[EDJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
+    log.info("[SSJoin] Number of matches " + nm)
+    log.info("[SSJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
 
     val profiles = profiles1.union(profiles2)
     val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, 0)), 0)
     clusters.cache()
     val cn = clusters.count()
     val t4 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Number of clusters " + cn)
-    log.info("[EDJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
+    log.info("[SSJoin] Number of clusters " + cn)
+    log.info("[SSJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
 
-    log.info("[EDJoin] Total time (s) " + (t4 - t1) / 1000.0)
+    log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
 
     val matchedPairs = clusters.map(_._2).flatMap(idSet => {
       val pairs = new ArrayBuffer[(Int, Int)]()
@@ -143,11 +145,11 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
     val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles)
 
     val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
-    println(matchesInDiffDataSet.count())
+    log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
     matchesInDiffDataSet.foreach(t => println(
       (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId))))
 
-    log.info("[EDJoin] Completed")
+    log.info("[SSJoin] Completed")
   }
 
   def mapMatchesWithProfiles(matchedPairs: RDD[(Int, Int)], profiles: RDD[Profile]): RDD[(Profile, Profile)] = {
@@ -157,6 +159,22 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
       join(profilesById).
       map(t => (t._2._1._2, t._2._2)).keyBy(_._1).
       join(profilesById).map(t => (t._2._1._2, t._2._2))
+  }
+
+  def getDataType(dataFile: String): String = {
+    val theDataFile = dataFile.toLowerCase()
+    if (theDataFile.endsWith(".csv")) {
+      ProfileLoaderFactory.DATA_TYPE_CSV
+    } else if (theDataFile.endsWith(".json")) {
+      ProfileLoaderFactory.DATA_TYPE_JSON
+    } else if (theDataFile.endsWith(".parquet")) {
+      ProfileLoaderFactory.DATA_TYPE_PARQUET
+    } else throw new RuntimeException("Do not support this data format")
+  }
+
+
+  def getProfileLoader(dataFile: String): ProfileLoaderTrait = {
+    ProfileLoaderFactory.getDataLoader(getDataType(dataFile))
   }
 
 }

@@ -212,7 +212,7 @@ object EDJoin {
     val t2 = Calendar.getInstance().getTimeInMillis
 
     val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
-      .filter(_._3 >= threshold)
+      .filter(_._3 <= threshold)
       .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
     val nm = m.count()
