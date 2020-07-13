@@ -8,6 +8,9 @@ import org.wumiguo.ser.methods.datastructure.{BlockAbstract, ProfileBlocks, Unwe
 import org.wumiguo.ser.methods.util.BoundedPriorityQueue
 
 /**
+ * Cardinality Node Pruning
+ */
+/**
   * Created by Luca on 04/08/2017.
   */
 object CNP {

@@ -54,11 +54,11 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     log.info("pb-detail-bb count " + profileBlocks.count() + " first " + profileBlocks.first())
     //block cleaning
     val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks, r = 0.5)
-    log.info("pb-detail-bf count " + profileBlockFilter1.count() + " first1 " + profileBlockFilter1.first())
+    log.info("pb-detail-bf count " + profileBlockFilter1.count() + " first " + profileBlockFilter1.first())
     //comparision cleaning
     val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1)
     val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)
-    log.info("pb-detail-bp count " + pAbRdd1.count() + " count2 " + pAbRdd1.first())
+    log.info("pb-detail-bp count " + pAbRdd1.count() + " first " + pAbRdd1.first())
     //entity matching
     val broadcastVar = spark.sparkContext.broadcast(ep1Rdd.collect())
     val combinedRdd = ep2Rdd.flatMap(p2 => broadcastVar.value.map(p1 => (p1, p2)))

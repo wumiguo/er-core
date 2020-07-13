@@ -9,6 +9,9 @@ import org.wumiguo.ser.methods.datastructure.{ProfileBlocks, UnweightedEdge}
 import scala.collection.mutable
 
 /**
+ * Cardinality Edge Pruning
+ */
+/**
   * Created by Luca on 10/04/2018.
   */
 object CEP {
