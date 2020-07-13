@@ -81,8 +81,8 @@ object PartEnum {
     })
   }
 
-  def getMatches(documents1: RDD[(Int, String)], documents2: RDD[(Int, String)], threshold: Double): RDD[(Int, Int, Double)] = {
-    val candidates = getCandidates(documents1.union(documents2), threshold)
+  def getMatches(documents: RDD[(Int, String)], threshold: Double): RDD[(Int, Int, Double)] = {
+    val candidates = getCandidates(documents, threshold)
     candidates.map(t => (t._1._2, t._2._2, MatchingFunctions.jaccardSimilarity(KeyValue(null, t._1._3), KeyValue(null, t._2._3)))).filter(t => t._3 >= threshold)
   }
 }
