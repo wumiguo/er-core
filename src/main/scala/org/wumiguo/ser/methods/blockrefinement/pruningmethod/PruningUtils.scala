@@ -5,28 +5,34 @@ import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.datastructure.{ProfileBlocks, UnweightedEdge}
 
 /**
-  * Contains common objects between differents pruning methods.
-  *
-  * @author Luca Gagliardelli
-  * @since 2017/03/06
-  */
+ * Contains common objects between differents pruning methods.
+ *
+ * @author Luca Gagliardelli
+ * @since 2017/03/06
+ */
 object PruningUtils {
 
   /**
-    * Types of weighting schemas
-    **/
+   * Types of weighting schemas
+   **/
   object WeightTypes {
+    /** Common Blocks Scheme */
     val CBS = "cbs"
+    /** Jaccard Scheme */
     val JS = "js"
+    /** Pearson's chi-squared test */
     val chiSquare = "chiSquare"
+    /** Aggregate Reciprocal Comparisons Scheme */
     val ARCS = "arcs"
+    /** Enhanced Common Blocks Scheme */
     val ECBS = "ecbs"
+    /** Enhanced Jaccard Scheme */
     val EJS = "ejs"
   }
 
   /**
-    * Types of threeshold
-    **/
+   * Types of threeshold
+   **/
   object ThresholdTypes {
     /** Local maximum divided by 2 */
     val MAX_FRACT_2 = "maxdiv2"
@@ -35,8 +41,8 @@ object PruningUtils {
   }
 
   /**
-    * Types of comparisons
-    **/
+   * Types of comparisons
+   **/
   object ComparisonTypes {
     /** Keep an edge only if its weight is greater than both the local thresholds of the profiles that it connects */
     val AND = "and"
@@ -74,18 +80,18 @@ object PruningUtils {
         val arrayPesi = Array.fill[Int](maxID + 1) {
           0
         } //Usato per memorizzare i pesi di ogni vicino
-      val arrayVicini = Array.ofDim[Int](maxID + 1) //Usato per tenere gli ID dei miei vicini
-      var numeroVicini = 0 //Memorizza il numero di vicini che ho
+        val arrayVicini = Array.ofDim[Int](maxID + 1) //Usato per tenere gli ID dei miei vicini
+        var numeroVicini = 0 //Memorizza il numero di vicini che ho
 
         partition map { //Mappo gli elementi contenuti nella partizione sono: [id profilo, blocchi]
           pb =>
             val profileID = pb.profileID //ID PROFILO
-          val blocchiInCuiCompare = pb.blocks //Blocchi in cui compare questo profilo
+            val blocchiInCuiCompare = pb.blocks //Blocchi in cui compare questo profilo
 
             blocchiInCuiCompare foreach { //Per ognuno dei blocchi in cui compare
               block =>
                 val idBlocco = block.blockID //ID BLOCCO
-              val profiliNelBlocco = blockIndex.value.get(idBlocco) //Leggo gli ID di tutti gli altri profili che sono in quel blocco
+                val profiliNelBlocco = blockIndex.value.get(idBlocco) //Leggo gli ID di tutti gli altri profili che sono in quel blocco
                 if (profiliNelBlocco.isDefined) {
                   val profiliCheContiene = {
                     if (separatorID >= 0 && profileID <= separatorID) { //Se siamo in un contesto clean e l'id del profilo appartiene al dataset1, i suoi vicini sono nel dataset2
@@ -99,7 +105,7 @@ object PruningUtils {
                   profiliCheContiene foreach { //Per ognuno dei suoi vicini in questo blocco
                     secondProfileID =>
                       val vicino = secondProfileID.toInt //ID del vicino
-                    val pesoAttuale = arrayPesi(vicino) //Leggo il peso attuale che ha questo vicino
+                      val pesoAttuale = arrayPesi(vicino) //Leggo il peso attuale che ha questo vicino
                       if (pesoAttuale == 0) { //Se è 0 vuol dire che non l'avevo mai trovato prima
                         arrayVicini.update(numeroVicini, vicino) //Aggiungo all'elenco dei vicini questo nuovo vicino
                         arrayPesi.update(vicino, 1) //Aggiorno il suo peso ad 1

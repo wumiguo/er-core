@@ -3,6 +3,7 @@ package org.wumiguo.ser.flow
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.CSVLoader
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
+import org.wumiguo.ser.methods.blockrefinement.pruningmethod.CEP
 import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
 import org.wumiguo.ser.methods.datastructure.KeysCluster
 import org.wumiguo.ser.methods.entityclustering.EntityClusterUtils
@@ -19,14 +20,14 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
 
   def run(args: Array[String]) = {
     //data reading
+    val sourceId1 = 1001
+    val sourceId2 = 1002
     val spark = createLocalSparkSession(getClass.getName)
     log.info("launch full end2end flow")
     val gtPath = getClass.getClassLoader.getResource("sampledata/dblpAcmIdDuplicates.mini.gen.csv").getPath
     log.info("load ground-truth from path {}", gtPath)
     val gtRdd = CSVLoader.loadGroundTruth(gtPath)
     log.info("gt size is {}", gtRdd.count())
-    val sourceId1 = 1001
-    val sourceId2 = 1002
     val startIDFrom = 0
     val separator = ","
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.mini.gen.csv").getPath
@@ -46,34 +47,33 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     clusters = KeysCluster(100112, List(sourceId1 + "_title", sourceId2 + "_title")) :: clusters
     clusters = KeysCluster(100113, List(sourceId1 + "_authors", sourceId2 + "_authors")) :: clusters
     clusters = KeysCluster(100114, List(sourceId1 + "_venue", sourceId2 + "_venue")) :: clusters
-    //    TokenBlocking.createBlocksCluster()
+    // TokenBlocking.createBlocksCluster()
     val epBlocks = TokenBlocking.createBlocksCluster(allEPRdd, separators, clusters)
     log.info("pb-detail-bc count " + epBlocks.count() + " first " + epBlocks.first())
     epBlocks.top(5).foreach(b => log.info("ep1b is {}", b))
     val profileBlocks = Converters.blocksToProfileBlocks(epBlocks)
     log.info("pb-detail-bb count " + profileBlocks.count() + " first " + profileBlocks.first())
-    //block cleaning
-    val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks, ratio = 0.5)
+    // block cleaning
+    val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks, ratio = 0.75)
     log.info("pb-detail-bf count " + profileBlockFilter1.count() + " first " + profileBlockFilter1.first())
-    //comparision cleaning
+    // comparision cleaning
     val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1)
     val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)
     log.info("pb-detail-bp count " + pAbRdd1.count() + " first " + pAbRdd1.first())
-    //entity matching
+    // entity matching
     val broadcastVar = spark.sparkContext.broadcast(ep1Rdd.collect())
     val combinedRdd = ep2Rdd.flatMap(p2 => broadcastVar.value.map(p1 => (p1, p2)))
-    //val combinedRdd = ep1Rdd.flatMap(p1 => (ep2Rdd.map(p2 => (p1, p2)).toLocalIterator))
+    // val combinedRdd = ep1Rdd.flatMap(p1 => (ep2Rdd.map(p2 => (p1, p2)).toLocalIterator))
     combinedRdd.take(2).foreach(x => log.info("pb-detail-cb combined {}", x))
     val weRdd = combinedRdd.map(x => EntityMatching.profileMatching(x._1, x._2, MatchingFunctions.jaccardSimilarity))
-    //entity clustering
+    // entity clustering
     val connected = EntityClusterUtils.connectedComponents(weRdd)
     connected.top(5).foreach(x => log.info("pb-detail-cc connected=" + x))
     val all = connected.flatMap(x => x)
-    val similarPairs = all.filter(x => x._3 > 0.6)
+    val similarPairs = all.filter(x => x._3 > 0.5)
     import spark.implicits._
     val pwd = System.getProperty("user.dir")
     similarPairs.toDF.write.csv(pwd + "/output/" + System.currentTimeMillis() + "/data.csv")
-    //val lessThan20 = connected.filter(x => x._3 < 0.2)
     spark.close()
   }
 
