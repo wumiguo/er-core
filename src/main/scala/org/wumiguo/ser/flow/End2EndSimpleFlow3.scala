@@ -56,8 +56,9 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     // block cleaning
     val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks, ratio = 0.75)
     log.info("pb-detail-bf count " + profileBlockFilter1.count() + " first " + profileBlockFilter1.first())
+    profileBlockFilter1.take(5).foreach(x => println("blockPurge=" + x))
     // comparision cleaning
-    val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1)
+    val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1, separatorIDs = separators)
     val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)
     log.info("pb-detail-bp count " + pAbRdd1.count() + " first " + pAbRdd1.first())
     // entity matching
@@ -67,13 +68,15 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     combinedRdd.take(2).foreach(x => log.info("pb-detail-cb combined {}", x))
     val weRdd = combinedRdd.map(x => EntityMatching.profileMatching(x._1, x._2, MatchingFunctions.jaccardSimilarity))
     // entity clustering
+    weRdd.take(2).foreach(x => log.info("pb-detail-pm weRdd=" + x))
     val connected = EntityClusterUtils.connectedComponents(weRdd)
-    connected.top(5).foreach(x => log.info("pb-detail-cc connected=" + x))
+    connected.take(5).foreach(x => log.info("pb-detail-cc connected=" + x))
     val all = connected.flatMap(x => x)
-    val similarPairs = all.filter(x => x._3 > 0.5)
+    val similarPairs = all.filter(x => x._3 >= 0.5)
+    val resolvedSimPairs = similarPairs.map(x => (x._1, x._2 - secondProfileStartIDFrom, x._3))
     import spark.implicits._
     val pwd = System.getProperty("user.dir")
-    similarPairs.toDF.write.csv(pwd + "/output/" + System.currentTimeMillis() + "/data.csv")
+    resolvedSimPairs.toDF.write.csv(pwd + "/output/" + System.currentTimeMillis() + "/data.csv")
     spark.close()
   }
 
