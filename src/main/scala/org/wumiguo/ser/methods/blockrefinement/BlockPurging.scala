@@ -4,11 +4,8 @@ import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.datastructure.BlockAbstract
 
 /**
-  * Implements the block purging.
- *
-  * @author Luca Gagliardelli
-  * @since 2016/12/08
-  */
+ * ComparisonsBasedBlockPurging
+ */
 object BlockPurging {
 
   /**
@@ -25,23 +22,28 @@ object BlockPurging {
     val blocksComparisonsAndSizes = blocks map {
       block => (block.getComparisonSize(), block.size)
     }
-
+    //println("blocksComparisonsAndSizes="+blocksComparisonsAndSizes.take(3).toList)
     //For each tuple (number of comparison, block size) produces (number of comparison, (number of comparison, block size))
     val blockComparisonsAndSizesPerComparisonLevel = blocksComparisonsAndSizes map {
       blockComparisonAndSize => (blockComparisonAndSize._1, blockComparisonAndSize)
     }
+    //println("blockComparisonsAndSizesPerComparisonLevel="+blockComparisonsAndSizesPerComparisonLevel.take(3).toList)
 
     //Group the tuple for the number of comparison and sum the numbers of comparison and the blocks size
     val totalNumberOfComparisonsAndSizePerComparisonLevel = blockComparisonsAndSizesPerComparisonLevel.reduceByKey((x, y) => (x._1+y._1, x._2+y._2))
+    //println("totalNumberOfComparisonsAndSizePerComparisonLevel="+totalNumberOfComparisonsAndSizePerComparisonLevel.take(3).toList)
 
     //For each level of comparison contains the total number of comparisons and the total number of profiles; it is sorted by comparison level
     val totalNumberOfComparisonsAndSizePerComparisonLevelSorted = totalNumberOfComparisonsAndSizePerComparisonLevel.sortBy(_._1).collect().toList
+    //println("totalNumberOfComparisonsAndSizePerComparisonLevelSorted="+totalNumberOfComparisonsAndSizePerComparisonLevelSorted.take(3).toList)
 
     //Sums to each level of comparisons the values of the all precedents levels
     val totalNumberOfComparisonsAndSizePerComparisonLevelSortedAdded = sumPrecedentLevels(totalNumberOfComparisonsAndSizePerComparisonLevelSorted)
+    //println("totalNumberOfComparisonsAndSizePerComparisonLevelSorted="+totalNumberOfComparisonsAndSizePerComparisonLevelSortedAdded.take(3).toList)
 
     //Calculate the maximum numbers of allowed comparisons
     val maximumNumberOfComparisonAllowed = calcMaxComparisonNumber(totalNumberOfComparisonsAndSizePerComparisonLevelSortedAdded.toArray, smoothFactor)
+    //println("maximumNumberOfComparisonAllowed="+maximumNumberOfComparisonAllowed)
 
     val log = org.apache.log4j.Logger.getRootLogger
 
@@ -80,6 +82,7 @@ object BlockPurging {
   /**
     * Given as input the totalNumberOfComparisonsAndSizePerComparisonLevelSortedAdded and the smooth factor
     * compute the maximum number of comparisons to keep
+    * Or: the first comparison size if there are not a lot input elements
     */
   def calcMaxComparisonNumber(input : Array[(Double, (Double, Double))], smoothFactor : Double) : Double = {
     var currentBC : Double = 0
@@ -89,7 +92,7 @@ object BlockPurging {
     var previousCC : Double = 0
     var previousSize : Double = 0
     val arraySize = input.length
-
+    //BC: block counter, CC: comparison counter
     for(i <- arraySize-1 to 0 by -1) {
       previousSize = currentSize
       previousBC = currentBC
