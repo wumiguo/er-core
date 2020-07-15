@@ -14,30 +14,35 @@ import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.io.File
 
 /**
-  * @author johnli
-  *         Created on 2020/6/18
-  *         (Change file header on Settings -> Editor -> File and Code Templates)
-  */
+ * @author johnli
+ *         Created on 2020/6/18
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ */
 object SchemaBasedSimJoinECFlow extends ERFlow {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
 
   override def run(args: Array[String]): Unit = {
+    val outputDir: File = File("/tmp/data-er")
+    if (outputDir.exists) {
+      outputDir.createDirectory(true)
+    }
     val conf = new SparkConf()
       .setAppName("SchemaBasedSimJoinECFlow")
       .setMaster("local[*]")
       .set("spark.default.parallelism", "4")
-      .set("spark.local.dir", "/data2/tmp")
+      .set("spark.local.dir", outputDir.path)
 
     var context = new SparkContext(conf)
-    val dataset1Path = CommandLineUtil.getParameter(args, "dataset1", "datasets\\clean\\DblpAcm\\dataset1.json")
+    val dataset1Path = CommandLineUtil.getParameter(args, "dataset1", "datasets/clean/DblpAcm/dataset1.json")
     val dataset1Format = CommandLineUtil.getParameter(args, "dataset1-format", "json")
     val dataset1Id = CommandLineUtil.getParameter(args, "dataset1-id", "realProfileID")
     val attributes1 = CommandLineUtil.getParameter(args, "attributes1", "title")
-    val dataset2Path = CommandLineUtil.getParameter(args, "dataset2", "datasets\\clean\\DblpAcm\\dataset2.json")
+    val dataset2Path = CommandLineUtil.getParameter(args, "dataset2", "datasets/clean/DblpAcm/dataset2.json")
     val dataset2Format = CommandLineUtil.getParameter(args, "dataset2-format", "json")
     val dataset2Id = CommandLineUtil.getParameter(args, "dataset2-id", "realProfileID")
     val attributes2 = CommandLineUtil.getParameter(args, "attributes2", "title")
