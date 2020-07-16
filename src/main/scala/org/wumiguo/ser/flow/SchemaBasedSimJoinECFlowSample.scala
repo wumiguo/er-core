@@ -4,9 +4,11 @@ import java.util.Calendar
 
 import org.apache.log4j.{FileAppender, Level, LogManager, SimpleLayout}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
-import org.wumiguo.ser.entity.parameter.{DataSetConfig}
+import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
+import org.wumiguo.ser.entity.parameter.DataSetConfig
+import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.{createLocalSparkSession, getClass}
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
@@ -21,7 +23,7 @@ import scala.reflect.io.File
  *         Created on 2020/6/18
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECFlowSample extends ERFlow with SparkEnvSetup {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -32,40 +34,48 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       outputDir.createDirectory(true)
     }
     val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
-    val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "dataSets/clean/DblpAcm/dataSet1.json")
-    val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
-    val dataSet1Id = CommandLineUtil.getParameter(args, "dataSet1-id", "realProfileID")
-    val attributes1 = CommandLineUtil.getParameter(args, "attributeSet1", "title")
-    val dataSet2Path = CommandLineUtil.getParameter(args, "dataSet2", "dataSets/clean/DblpAcm/dataSet2.json")
-    val dataSet2Format = CommandLineUtil.getParameter(args, "dataSet2-format", "json")
-    val dataSet2Id = CommandLineUtil.getParameter(args, "dataSet2-id", "realProfileID")
-    val attributes2 = CommandLineUtil.getParameter(args, "attributeSet2", "title")
+
+    val dataset1Path = CommandLineUtil.getParameter(args, "dataset1", "datasets/clean/DblpAcm/dataset1.json")
+    val dataset1Format = CommandLineUtil.getParameter(args, "dataset1-format", "json")
+    val dataset1Id = CommandLineUtil.getParameter(args, "dataset1-id", "realProfileID")
+    val attributes1 = CommandLineUtil.getParameter(args, "attributes1", "title")
+    val dataset2Path = CommandLineUtil.getParameter(args, "dataset2", "datasets/clean/DblpAcm/dataset2.json")
+    val dataset2Format = CommandLineUtil.getParameter(args, "dataset2-format", "json")
+    val dataset2Id = CommandLineUtil.getParameter(args, "dataset2-id", "realProfileID")
+    val attributes2 = CommandLineUtil.getParameter(args, "attributes2", "title")
     val q = CommandLineUtil.getParameter(args, "q", "2")
     val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
 
     val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
 
-    val dataSet1 = new DataSetConfig(dataSet1Path, dataSet1Format, dataSet1Id,
+    val dataset1 = new DataSetConfig(dataset1Path, dataset1Format, dataset1Id,
       Option(attributes1).map(_.split(",")).orNull)
-    val dataSet2 = new DataSetConfig(dataSet2Path, dataSet2Format, dataSet2Id,
+    val dataset2 = new DataSetConfig(dataset2Path, dataset2Format, dataset2Id,
       Option(attributes2).map(_.split(",")).orNull)
 
-    def profileLoader: ProfileLoaderTrait = getProfileLoader(dataSet1.path)
+    val logPath = "ss-join.log"
 
-    val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0)
-    val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
+    val log = LogManager.getRootLogger
+    log.setLevel(Level.INFO)
+    val layout = new SimpleLayout()
+    val appender = new FileAppender(layout, logPath, false)
+    log.addAppender(appender)
 
-    assert(dataSet2.path == null || dataSet1.attributes.length == dataSet2.attributes.length,
-      "If dataSet 2 exist, the number of attribute use to compare between dataSet 1 and dataSet 2 should be equal")
+    def profileLoader: ProfileLoaderTrait = getProfileLoader(dataset1.path)
+
+    val profiles1 = profileLoader.load(dataset1.path, realIDField = dataset1.dataSetId, startIDFrom = 0, sourceId = 0)
+    val profiles2 = profileLoader.load(dataset2.path, realIDField = dataset2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
+
+    assert(dataset2.path == null || dataset1.attributes.length == dataset2.attributes.length,
+      "If dataset 2 exist, the number of attribute use to compare between dataset 1 and dataset 2 should be equal")
 
     var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
 
-    for (i <- 0 until dataSet1.attributes.length) {
-      val attributes1 = CommonFunctions.extractField(profiles1, dataSet1.attributes(i))
-      val attributes2 = Option(dataSet2.attributes).map(attributes => CommonFunctions.extractField(profiles2, attributes(i))).orNull
+    for (i <- 0 until dataset1.attributes.length) {
+      val attributes1 = CommonFunctions.extractField(profiles1, dataset1.attributes(i))
+      val attributes2 = Option(dataset2.attributes).map(attributes => CommonFunctions.extractField(profiles2, attributes(i))).orNull
       attributesArray += ((attributes1, attributes2))
     }
-    log.info("attributesArray count=" + attributesArray.length)
 
     val t1 = Calendar.getInstance().getTimeInMillis
     var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
@@ -136,9 +146,9 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
 
     val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles)
 
-    val matchesInDiffdataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
-    log.info("[SSJoin] Get matched pairs " + matchesInDiffdataSet.count())
-    matchesInDiffdataSet.foreach(t => println(
+    val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+    log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
+    matchesInDiffDataSet.foreach(t => println(
       (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId))))
 
     log.info("[SSJoin] Completed")

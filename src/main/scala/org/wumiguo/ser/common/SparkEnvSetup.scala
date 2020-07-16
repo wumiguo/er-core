@@ -29,12 +29,14 @@ trait SparkEnvSetup {
     }
   }
 
-  def createLocalSparkSession(applicationName: String, configPath: String = null): SparkSession = {
+  def createLocalSparkSession(applicationName: String, configPath: String = null, outputDir: String = "/tmp/er"): SparkSession = {
     try {
       if (sparkSession == null || sparkSession.sparkContext.isStopped) {
         val sparkConf = new SparkConf()
         sparkConf.setAppName(applicationName)
-        sparkConf.setMaster("local[*]")
+          .setMaster("local[*]")
+          .set("spark.default.parallelism", "4")
+          .set("spark.local.dir", outputDir)
         sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
       }
       sparkSession
