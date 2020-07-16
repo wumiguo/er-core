@@ -1,5 +1,7 @@
 name := "er-spark"
 
+organization := "org.wumiguo"
+
 version := "0.1"
 
 scalaVersion := "2.11.8"
@@ -12,6 +14,9 @@ initialize := {
 }
 
 val sparkVersion = "2.3.0"
+
+//packageBin in Compile := file(s"${name.value}_${scalaBinaryVersion.value}.jar")
+
 
 //unmanagedBase := baseDirectory.value / "custom_lib"
 

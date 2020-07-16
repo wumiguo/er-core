@@ -7,4 +7,5 @@ class MyMiniTest extends FeatureSpec {
     val a = 12
     assert(a * 3 == 36)
   }
+
 }

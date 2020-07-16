@@ -5,7 +5,8 @@ import java.util.Calendar
 import org.apache.log4j.{FileAppender, Level, LogManager, SimpleLayout}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.wumiguo.ser.dataloader.{JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
+import org.wumiguo.ser.dataloader.DataType.DataType
+import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.entity.parameter.DatasetConfig
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
@@ -166,20 +167,9 @@ object SchemaBasedSimJoinECFlow extends ERFlow {
       join(profilesById).map(t => (t._2._1._2, t._2._2))
   }
 
-  def getDataType(dataFile: String): String = {
-    val theDataFile = dataFile.toLowerCase()
-    if (theDataFile.endsWith(".csv")) {
-      ProfileLoaderFactory.DATA_TYPE_CSV
-    } else if (theDataFile.endsWith(".json")) {
-      ProfileLoaderFactory.DATA_TYPE_JSON
-    } else if (theDataFile.endsWith(".parquet")) {
-      ProfileLoaderFactory.DATA_TYPE_PARQUET
-    } else throw new RuntimeException("Do not support this data format")
-  }
-
 
   def getProfileLoader(dataFile: String): ProfileLoaderTrait = {
-    ProfileLoaderFactory.getDataLoader(getDataType(dataFile))
+    ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(dataFile))
   }
 
 }
