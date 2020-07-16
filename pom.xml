@@ -13,6 +13,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <spark.version>2.3.0</spark.version>
+        <scalatest.version>2.2.5</scalatest.version>
 <!--        <spark.version>2.3.3</spark.version>-->
     </properties>
 
@@ -73,12 +74,14 @@
         <dependency>
             <groupId>org.scalactic</groupId>
             <artifactId>scalactic_2.11</artifactId>
-            <version>3.1.2</version>
+<!--            <version>3.1.2</version>-->
+            <version>${scalatest.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.11</artifactId>
-            <version>3.1.2</version>
+<!--            <version>3.1.2</version>-->
+            <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
