@@ -32,11 +32,11 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       outputDir.createDirectory(true)
     }
     val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
-    val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "dataSets/clean/DblpAcm/dataSet1.json")
+    val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "datasets/clean/DblpAcm/dataset1.json")
     val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
     val dataSet1Id = CommandLineUtil.getParameter(args, "dataSet1-id", "realProfileID")
     val attributes1 = CommandLineUtil.getParameter(args, "attributeSet1", "title")
-    val dataSet2Path = CommandLineUtil.getParameter(args, "dataSet2", "dataSets/clean/DblpAcm/dataSet2.json")
+    val dataSet2Path = CommandLineUtil.getParameter(args, "dataSet2", "datasets/clean/DblpAcm/dataset2.json")
     val dataSet2Format = CommandLineUtil.getParameter(args, "dataSet2-format", "json")
     val dataSet2Id = CommandLineUtil.getParameter(args, "dataSet2-id", "realProfileID")
     val attributes2 = CommandLineUtil.getParameter(args, "attributeSet2", "title")
