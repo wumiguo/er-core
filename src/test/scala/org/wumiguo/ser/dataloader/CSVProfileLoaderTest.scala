@@ -12,12 +12,12 @@ import scala.collection.mutable
  *         Created on 2020/6/19
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
+class CSVProfileLoaderTest extends FlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(this.getClass.getName)
 
   it should "load ground truth with header" in {
     val gtPath = TestDirs.resolveTestResourcePath("data/csv/dblpAcmIdDuplicates-withheader.csv")
-    val meRdd = CSVLoader.loadGroundTruth(gtPath, ",", true)
+    val meRdd = CSVProfileLoader.loadGroundTruth(gtPath, ",", true)
     assert(meRdd != null)
     assert(meRdd.count() == 200)
     val first = meRdd.sortBy(_.firstEntityID, ascending = true).first()
@@ -26,7 +26,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
 
   it should "load ground truth with header and take header as normal entry" in {
     val gtPath = TestDirs.resolveTestResourcePath("data/csv/dblpAcmIdDuplicates-withheader.csv")
-    val meRdd = CSVLoader.loadGroundTruth(gtPath, ",", false)
+    val meRdd = CSVProfileLoader.loadGroundTruth(gtPath, ",", false)
     assert(meRdd != null)
     assert(meRdd.count() == 201)
     val first = meRdd.sortBy(_.firstEntityID, ascending = false).first()
@@ -35,7 +35,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
 
   it should "load valid ground truth" in {
     val gtPath = TestDirs.resolveTestResourcePath("data/csv/dblpAcmIdDuplicates-noheader.gen.csv")
-    val meRdd = CSVLoader.loadGroundTruth(gtPath)
+    val meRdd = CSVProfileLoader.loadGroundTruth(gtPath)
     assert(meRdd != null)
     assert(meRdd.count() == 3)
     meRdd.foreach(e => println(e))
@@ -47,7 +47,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.10.csv")
     val startIdFrom = 100
     val realIDField = ""
-    val ep1Rdd = CSVLoader.loadProfiles(ep1Path, startIdFrom, realIDField)
+    val ep1Rdd = CSVProfileLoader.loadProfiles(ep1Path, startIdFrom, realIDField)
     assert(10 == ep1Rdd.count())
     assertResult(Profile(100, mutable.MutableList(
       KeyValue("_c0", "0"),
@@ -60,7 +60,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
   it should "load 15 entity profiles with header" in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true)
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true)
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
     assert(15 == ep1Rdd.count())
@@ -75,7 +75,7 @@ class CSVLoaderTest extends FlatSpec with SparkEnvSetup {
   it should "load 15 entity profiles with header and id column" in {
     val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
     val startIdFrom = 1
-    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
     assert(15 == ep1Rdd.count())

@@ -1,7 +1,7 @@
 package org.wumiguo.ser.flow
 
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.dataloader.CSVLoader
+import org.wumiguo.ser.dataloader.CSVProfileLoader
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
 import org.wumiguo.ser.methods.blockrefinement.pruningmethod.CEP
 import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
@@ -26,16 +26,16 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     log.info("launch full end2end flow")
     val gtPath = getClass.getClassLoader.getResource("sampledata/dblpAcmIdDuplicates.mini.gen.csv").getPath
     log.info("load ground-truth from path {}", gtPath)
-    val gtRdd = CSVLoader.loadGroundTruth(gtPath)
+    val gtRdd = CSVProfileLoader.loadGroundTruth(gtPath)
     log.info("gt size is {}", gtRdd.count())
     val startIDFrom = 0
     val separator = ","
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.mini.gen.csv").getPath
-    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom, separator, header = true, sourceId = sourceId1)
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom, separator, header = true, sourceId = sourceId1)
     log.info("ep1 size is {}", ep1Rdd.count())
     val secondProfileStartIDFrom = ep1Rdd.count().toInt - 1 + startIDFrom
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.mini.gen.csv").getPath
-    val ep2Rdd = CSVLoader.loadProfilesAdvanceMode(ep2Path, secondProfileStartIDFrom, separator, header = true, sourceId = sourceId2)
+    val ep2Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep2Path, secondProfileStartIDFrom, separator, header = true, sourceId = sourceId2)
     log.info("ep2 size is {}", ep2Rdd.count())
     val allEPRdd = ep1Rdd.union(ep2Rdd)
     allEPRdd.sortBy(_.id).take(5).foreach(x => log.info("all-profileId=" + x))

@@ -3,7 +3,7 @@ package org.wumiguo.ser.flow
 import org.slf4j.LoggerFactory
 import org.wumiguo.ser.ERFlowLauncher.getClass
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.dataloader.CSVLoader
+import org.wumiguo.ser.dataloader.CSVProfileLoader
 import org.wumiguo.ser.flow.End2EndFlow.log
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
 import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
@@ -27,13 +27,13 @@ object End2EndFlow extends ERFlow with SparkEnvSetup {
     log.info("launch full end2end flow")
     val gtPath = getClass.getClassLoader.getResource("sampledata/dblpAcmIdDuplicates.gen.csv").getPath
     log.info("load ground-truth from path {}", gtPath)
-    val gtRdd = CSVLoader.loadGroundTruth(gtPath)
+    val gtRdd = CSVProfileLoader.loadGroundTruth(gtPath)
     log.info("gt size is {}", gtRdd.count())
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.gen.csv").getPath
-    val ep1Rdd = CSVLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = 1001)
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom = 0, separator = ",", header = true, sourceId = 1001)
     log.info("ep1 size is {}", ep1Rdd.count())
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.gen.csv").getPath
-    val ep2Rdd = CSVLoader.loadProfilesAdvanceMode(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = 2002)
+    val ep2Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep2Path, startIDFrom = 0, separator = ",", header = true, sourceId = 2002)
     log.info("ep2 size is {}", ep2Rdd.count())
     //build blocks
     val separators = Array[Int]()

@@ -51,7 +51,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       Option(attributes2).map(_.split(",")).orNull)
 
     def profileLoader: ProfileLoaderTrait = getProfileLoader(dataSet1.path)
-
+    log.info("resolve profile loader " + profileLoader)
     val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0)
     val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
 
