@@ -2,6 +2,7 @@ package org.wumiguo.ser.methods.similarityjoins.common
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
+import org.slf4j.LoggerFactory
 import org.wumiguo.ser.methods.datastructure
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 
@@ -9,13 +10,16 @@ import scala.collection.mutable
 
 /**
  * @author levinliu
- * Created on 2020/6/11
+ *         Created on 2020/6/11
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 object CommonFunctions {
+  val log = LoggerFactory.getLogger(getClass.getName)
 
   def extractField(profiles: RDD[Profile], fieldName: String): RDD[(Int, String)] = {
+    log.debug("extract field {}", fieldName)
     profiles.map { profile =>
+      log.debug("profile-attributes=" + profile.attributes.map(_.key).toList)
       (profile.id, profile.attributes.filter(_.key == fieldName).map(_.value).mkString(" ").toLowerCase)
     }.filter(!_._2.trim.isEmpty)
   }
@@ -27,11 +31,11 @@ object CommonFunctions {
   }
 
   /**
-    * Given a row return the list of attributes
-    *
-    * @param columnNames names of the dataframe columns
-    * @param row         single dataframe row
-    **/
+   * Given a row return the list of attributes
+   *
+   * @param columnNames names of the dataframe columns
+   * @param row         single dataframe row
+   **/
   def rowToAttributes(columnNames: Array[String], row: Row, explodeInnerFields: Boolean = false, innerSeparator: String = ","): mutable.MutableList[KeyValue] = {
     val attributes: mutable.MutableList[KeyValue] = new mutable.MutableList()
     for (i <- 0 until row.size) {

@@ -7,11 +7,11 @@ import org.wumiguo.ser.methods.datastructure.Profile
 
 object ParquetProfileLoader extends ProfileLoaderTrait {
 
-  override def load(filePath: String, startIDFrom: Int = 0, realIDField: String, sourceId: Int = 0, fieldsToKeep: List[String] = Nil): RDD[Profile] = {
-    loadProfiles2(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId)
+  override def load(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int, fieldsToKeep: List[String], withReadID: Boolean = false): RDD[Profile] = {
+    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId)
   }
 
-  def loadProfiles2(filePath: String, startIDFrom: Int = 0, separator: String = ",", realIDField: String = "-1", sourceId: Int = 0): RDD[Profile] = {
+  def loadProfilesAdvanceMode(filePath: String, startIDFrom: Int = 0, separator: String = ",", realIDField: String = "-1", sourceId: Int = 0): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
 
     val df = sparkSession.read.parquet(filePath)

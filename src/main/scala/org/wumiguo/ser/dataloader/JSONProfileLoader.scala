@@ -6,38 +6,43 @@ import org.json.{JSONArray, JSONObject}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 
 /**
-  * Created by Luca on 08/12/2016.
-  *
-  * JSON Wrapper
-  */
+ * @author levinliu
+ *         Created on 2020/6/19
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ */
 object JSONProfileLoader extends ProfileLoaderTrait {
 
 
-  def parseData(key: String, data: Any, p: Profile, fieldsToKeep: List[String], realIDField: String): Unit = {
+  def addAttribute(key: String, data: Any, p: Profile): Unit = {
     data match {
       case jsonArray: JSONArray =>
         val it = jsonArray.iterator()
         while (it.hasNext) {
-          //p.addAttribute(KeyValue(key, it.next().toString))
-          parseData(key, it.next(), p, fieldsToKeep, realIDField)
+          addAttribute(key, it.next(), p)
         }
-      case jsonbject: JSONObject =>
-        val it = jsonbject.keys()
+      case jsonObject: JSONObject =>
+        val it = jsonObject.keys()
         while (it.hasNext) {
           val key = it.next()
-          //p.addAttribute(KeyValue(key, jsonbject.get(key).toString))
-          parseData(key, jsonbject.get(key), p, fieldsToKeep, realIDField)
+          addAttribute(key, jsonObject.get(key), p)
         }
       case _ => p.addAttribute(KeyValue(key, data.toString))
     }
   }
 
   /**
-    * Load the profiles from a JSON file.
-    * The JSON must contains a JSONObject for each row, and the JSONObject must be in the form key: value
-    * the value can be a single value or an array of values
-    **/
-  override def load(filePath: String, startIDFrom: Int = 0, realIDField: String = "", sourceId: Int = 0, fieldsToKeep: List[String] = Nil): RDD[Profile] = {
+   * load json from path with startID
+   *
+   * @param filePath
+   * @param startIDFrom
+   * @param realIDField
+   * @param sourceId
+   * @param fieldsToKeep
+   * @param keepRealID
+   * @return Profile Rdd with selected fields
+   */
+  override def load(filePath: String, startIDFrom: Int = 0, realIDField: String = "", sourceId: Int = 0,
+                    fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false): RDD[Profile] = {
     val sc = SparkContext.getOrCreate()
     val raw = sc.textFile(filePath, sc.defaultParallelism)
 
@@ -56,9 +61,10 @@ object JSONProfileLoader extends ProfileLoaderTrait {
       val keys = obj.keys()
       while (keys.hasNext) {
         val key = keys.next()
-        if (key != realIDField && (fieldsToKeep.isEmpty || fieldsToKeep.contains(key))) {
+        if ((keepRealID && key == realIDField) ||
+          (key != realIDField && (fieldsToKeep.isEmpty || fieldsToKeep.contains(key)))) {
           val data = obj.get(key)
-          parseData(key, data, p, fieldsToKeep, realIDField)
+          addAttribute(key, data, p)
         }
       }
       p

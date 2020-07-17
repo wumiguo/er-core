@@ -22,7 +22,8 @@ trait ProfileLoaderTrait {
    * @param fieldsToKeep
    * @return Profile Rdd with selected fields
    */
-  def load(filePath: String, startIDFrom: Int = 0, realIDField: String, sourceId: Int = 0, fieldsToKeep: List[String] = Nil): RDD[Profile]
+  def load(filePath: String, startIDFrom: Int = 0, realIDField: String,
+           sourceId: Int = 0, fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false): RDD[Profile]
 
   /**
    * Given a row return the list of attributes

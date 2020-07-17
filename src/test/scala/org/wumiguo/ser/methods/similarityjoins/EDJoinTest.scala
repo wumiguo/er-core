@@ -1,5 +1,6 @@
 package org.wumiguo.ser.methods.similarityjoins
 
+import org.apache.spark.rdd.RDD
 import org.scalatest.FlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.methods.similarityjoins.common.ed.CommonEdFunctions
@@ -64,7 +65,9 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
         (3, "this string with 1 substitution change"),
         (4, "mhis string with 1 substitution change"),
         (5, "this string with 1 delete change"),
-        (6, "his string with 1 delete change")
+        (6, "his string with 1 delete change"),
+        (7, "first"),
+        (8, "second")
       ))
     val results = EDJoin.getMatches(docs, 3, 1).collect
     assertResult(
@@ -102,6 +105,20 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
     assertResult(
       ((1, "this string with 1 insert change"), (2, "mthis string with 1 insert change"))
     )(candis.sortBy(_._1._1).first())
+  }
+
+  it should "getCandidatePairs" in {
+    val prefixIndex = spark.sparkContext.parallelize(
+      Seq[(Int, Array[(Int, Int, Array[(Int, Int)], String)])](
+        (1, Array((1, 1, Array((1, 1)), ""))),
+        (2, Array((1, 1, Array((1, 1)), "")))
+      )
+    )
+    val qgramLength = 2
+    val threshold = 2
+    val pairRdd = EDJoin.getCandidatePairs(prefixIndex, qgramLength, threshold)
+    println("pairCount=" + pairRdd.count())
+    pairRdd.foreach(x => println("pair=" + x))
   }
 }
 
