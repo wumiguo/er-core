@@ -34,4 +34,5 @@ class CommonFunctionsTest extends FlatSpec with SparkEnvSetup {
     assert(2 == vRdd.count())
     assertResult((0, "0 the wasa2 object-oriented workflow management system international conference on management of data gottfried vossen, mathias weske"))(vRdd.first())
   }
+
 }

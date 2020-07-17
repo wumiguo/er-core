@@ -4,18 +4,19 @@ import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.similarityjoins.datastructure.Qgram
 
 /**
-  * @author levinliu
-  *         Created on 2020/6/11
-  *         (Change file header on Settings -> Editor -> File and Code Templates)
-  */
+ * @author levinliu
+ *         Created on 2020/6/11
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ */
 object CommonEdFunctions {
+
   object commons {
     def fixPrefix: (Int, Int) = (-1, -1)
   }
 
   /**
-    * Dati due elementi ne calcola l'edit distance
-    **/
+   * Dati due elementi ne calcola l'edit distance
+   **/
   def editDist[A](a: Iterable[A], b: Iterable[A]): Int = {
     ((0 to b.size).toList /: a) ((prev, x) =>
       (prev zip prev.tail zip b).scanLeft(prev.head + 1) {
@@ -24,18 +25,20 @@ object CommonEdFunctions {
   }
 
   /**
-    * Data una stringa ne restituisce i qgrammi.
-    * Il qgramma ha anche la posizione originale nel documento
-    **/
+   * Data una stringa ne restituisce i qgrammi.
+   * Il qgramma ha anche la posizione originale nel documento
+   **/
   def getQgrams(str: String, qgramSize: Int): Array[(String, Int)] = {
     str.sliding(qgramSize).zipWithIndex.map(q => (q._1, q._2)).toArray
   }
 
 
   /**
-    * Dati i documenti trasformati in q-grammi calcola la document frequency per ogni qgramma
-    * Term frequency of each q-gram
-    **/
+   * count the words in the docs' array
+   *
+   * @param docs
+   * @return
+   */
   def getQgramsTf(docs: RDD[(Int, Array[(String, Int)])]): Map[String, Int] = {
     //output [se,el,lf,el...]
     val allQgrams = docs.flatMap { case (docId, qgrams) =>
@@ -48,8 +51,8 @@ object CommonEdFunctions {
   }
 
   /**
-    * Ordina i qgrammi all'interno del documento per la loro document frequency
-    **/
+   * Ordina i qgrammi all'interno del documento per la loro document frequency
+   **/
   def getSortedQgrams(docs: RDD[(Int, Array[(String, Int)])]): RDD[(Int, Array[(Int, Int)])] = {
     val tf = getQgramsTf(docs)
     val tf2 = docs.context.broadcast(tf.toList.sortBy(_._2).zipWithIndex.map(x => (x._1._1, x._2)).toMap)
@@ -77,10 +80,10 @@ object CommonEdFunctions {
   }
 
   /**
-    * Dato l'elenco di documenti con i q-grammi ordinati crea il prefix index.
-    * Nota: per risolvere il problema dei documenti troppo corti il prefix index contiene un blocco identificato dall'id
-    * specificato in "fixprefix" che contiene tutti i documenti che non possono essere verificati con sicurezza.
-    **/
+   * Dato l'elenco di documenti con i q-grammi ordinati crea il prefix index.
+   * Nota: per risolvere il problema dei documenti troppo corti il prefix index contiene un blocco identificato dall'id
+   * specificato in "fixprefix" che contiene tutti i documenti che non possono essere verificati con sicurezza.
+   **/
   def buildPrefixIndex(sortedDocs: RDD[(Int, Array[(Int, Int)])], qgramLen: Int, threshold: Int): RDD[(Int, Array[Qgram])] = {
     val prefixLen = EdFilters.getPrefixLen(qgramLen, threshold)
 

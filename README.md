@@ -17,7 +17,7 @@ sbt test
 
 sbt "testOnly *DataTypeR*"
 
-# Put it into local repo
+## Put it into local repo
 sbt compile package publishLocal
 
 ## Compatibility Setting

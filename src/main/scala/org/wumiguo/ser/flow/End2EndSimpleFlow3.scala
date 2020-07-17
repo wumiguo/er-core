@@ -1,7 +1,7 @@
 package org.wumiguo.ser.flow
 
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.dataloader.CSVProfileLoader
+import org.wumiguo.ser.dataloader.{CSVProfileLoader, DataTypeResolver, ProfileLoaderFactory}
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
 import org.wumiguo.ser.methods.blockrefinement.pruningmethod.CEP
 import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
@@ -31,7 +31,9 @@ object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
     val startIDFrom = 0
     val separator = ","
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.mini.gen.csv").getPath
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom, separator, header = true, sourceId = sourceId1)
+    val profileLoader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(ep1Path))
+    //val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom, separator, header = true, sourceId = sourceId1)
+    val ep1Rdd = profileLoader.load(ep1Path,startIDFrom,"",sourceId1)
     log.info("ep1 size is {}", ep1Rdd.count())
     val secondProfileStartIDFrom = ep1Rdd.count().toInt - 1 + startIDFrom
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.mini.gen.csv").getPath
