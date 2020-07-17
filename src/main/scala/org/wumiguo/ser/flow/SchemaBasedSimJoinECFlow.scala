@@ -2,11 +2,11 @@ package org.wumiguo.ser.flow
 
 import java.util.Calendar
 
-import org.apache.log4j.{FileAppender, Level, LogManager, SimpleLayout}
 import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
-import org.wumiguo.ser.entity.parameter.{DataSetConfig}
+import org.wumiguo.ser.entity.parameter.DataSetConfig
+import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
@@ -51,26 +51,25 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       Option(attributes2).map(_.split(",")).orNull)
 
     def profileLoader: ProfileLoaderTrait = getProfileLoader(dataSet1.path)
-    log.info("resolve profile loader " + profileLoader)
+
+    log.debug("resolve profile loader " + profileLoader)
+
     val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0)
     val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
+    preCheckOnProfile(profiles1)
+    preCheckOnProfile(profiles2)
+    log.info("profiles1 first=" + profiles1.first())
+    log.info("profiles2 first=" + profiles2.first())
 
     assert(dataSet2.path == null || dataSet1.attributes.length == dataSet2.attributes.length,
       "If dataSet 2 exist, the number of attribute use to compare between dataSet 1 and dataSet 2 should be equal")
 
-    var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
-
-    for (i <- 0 until dataSet1.attributes.length) {
-      val attributes1 = CommonFunctions.extractField(profiles1, dataSet1.attributes(i))
-      val attributes2 = Option(dataSet2.attributes).map(attributes => CommonFunctions.extractField(profiles2, attributes(i))).orNull
-      attributesArray += ((attributes1, attributes2))
-    }
-    log.info("attributesArray count=" + attributesArray.length)
+    val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
 
     val t1 = Calendar.getInstance().getTimeInMillis
     var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
     var attributeses = ArrayBuffer[RDD[(Int, String)]]()
-    attributesArray.foreach(attributesTuple => {
+    attributePairsArray.foreach(attributesTuple => {
       val attributes1 = attributesTuple._1
       val attributes2 = attributesTuple._2
       val attributesMatch: RDD[(Int, Int, Double)] =
@@ -103,7 +102,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
 
     val nm = matches.count()
     val t3 = Calendar.getInstance().getTimeInMillis
-    attributesArray.foreach(attributesTuple => {
+    attributePairsArray.foreach(attributesTuple => {
       Option(attributesTuple._1).map(_.unpersist())
       Option(attributesTuple._2).map(_.unpersist())
     })
@@ -143,6 +142,29 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
 
     log.info("[SSJoin] Completed")
   }
+
+  private def preCheckOnProfile(profiles: RDD[Profile]) = {
+    val pCount = profiles.count()
+    if (pCount <= 0) {
+      throw new RuntimeException("Empty profile data set")
+    }
+    log.info("profiles count=" + pCount)
+  }
+
+  def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfig, dataSet2: DataSetConfig): ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
+    var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
+    log.info("dataSet1Attr=" + dataSet1.attributes.toList)
+    log.info("dataSet2Attr=" + dataSet2.attributes.toList)
+    for (i <- 0 until dataSet1.attributes.length) {
+      val attributes1 = CommonFunctions.extractField(profiles1, dataSet1.attributes(i))
+      val attributes2 = Option(dataSet2.attributes).map(attributes => CommonFunctions.extractField(profiles2, attributes(i))).orNull
+      attributesArray += ((attributes1, attributes2))
+    }
+    log.info("attributesArray count=" + attributesArray.length)
+    log.info("attributesArray _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
+    attributesArray
+  }
+
 
   def mapMatchesWithProfiles(matchedPairs: RDD[(Int, Int)], profiles: RDD[Profile]): RDD[(Profile, Profile)] = {
     val profilesById = profiles.keyBy(_.id)

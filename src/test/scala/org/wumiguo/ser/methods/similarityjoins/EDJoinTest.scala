@@ -86,5 +86,22 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
     assertResult(Array())(results)
   }
 
+  it should "getCandidates" in {
+    val docs = spark.sparkContext.parallelize(
+      Seq(
+        (1, "this string with 1 insert change"),
+        (2, "mthis string with 1 insert change"),
+        (3, "this string with 1 substitution change"),
+        (4, "mhis string with 1 substitution change"),
+        (5, "this string with 1 delete change"),
+        (6, "his string with 1 delete change")
+      ))
+    val candis = EDJoin.getCandidates(docs, 3, 1)
+    candis.foreach(x => println("candi=" + x))
+    assertResult(3)(candis.count())
+    assertResult(
+      ((1, "this string with 1 insert change"), (2, "mthis string with 1 insert change"))
+    )(candis.sortBy(_._1._1).first())
+  }
 }
 

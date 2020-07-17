@@ -68,6 +68,6 @@ object CSVProfileLoader extends ProfileLoaderTrait {
   }
 
   override def load(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int, fieldsToKeep: List[String]): RDD[Profile] = {
-    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId)
+    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId, header = true)
   }
 }

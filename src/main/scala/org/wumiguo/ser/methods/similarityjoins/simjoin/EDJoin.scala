@@ -157,6 +157,7 @@ object EDJoin {
     //(docId,string,positional q-gram)
     //(3783,concurrency control in hierarchical multidatabase systems,((co,0),(on,1),(nc,2),(cu,3),(ur,4),(rr,5),(re,6),(en,7)......))
     val docs = getPositionalQGrams(documents, qgramLength)
+    val log = LogManager.getRootLogger
 
     //Sorts the n-grams by their document frequency
     /** From the paper
@@ -166,8 +167,7 @@ object EDJoin {
     //q-gram is order by rare decreasing, the rarest one in the head of the array
     val sortedDocs = CommonEdFunctions.getSortedQgrams2(docs)
     sortedDocs.persist(StorageLevel.MEMORY_AND_DISK)
-    sortedDocs.count()
-
+    log.info("[EDJoin] sorted docs count " + sortedDocs.count())
     val ts = Calendar.getInstance().getTimeInMillis
     //output [(tokenId,[strings contain same token])...]
     val prefixIndex = buildPrefixIndex(sortedDocs, qgramLength, threshold)
@@ -175,7 +175,7 @@ object EDJoin {
     val np = prefixIndex.count()
     sortedDocs.unpersist()
     val te = Calendar.getInstance().getTimeInMillis
-    val log = LogManager.getRootLogger
+    log.info("[EDJoin] Number of elements in the index " + np)
 
     //only use to do the statistics, not a part of the algorithm
     val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
@@ -184,7 +184,6 @@ object EDJoin {
     val cnum = a.sum()
     val avg = cnum / np
 
-    log.info("[EDJoin] Number of elements in the index " + np)
     log.info("[EDJoin] Min number of comparisons " + min)
     log.info("[EDJoin] Max number of comparisons " + max)
     log.info("[EDJoin] Avg number of comparisons " + avg)
@@ -204,10 +203,11 @@ object EDJoin {
   }
 
   def getMatches(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
+    val log = LogManager.getRootLogger
+    log.info("[EDJoin] first document " + documents.first())
 
     val t1 = Calendar.getInstance().getTimeInMillis
     val candidates = getCandidates(documents, qgramLength, threshold)
-    val log = LogManager.getRootLogger
 
     val t2 = Calendar.getInstance().getTimeInMillis
 

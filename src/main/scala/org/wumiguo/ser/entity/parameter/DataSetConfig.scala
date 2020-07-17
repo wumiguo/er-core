@@ -3,7 +3,8 @@ package org.wumiguo.ser.entity.parameter
 import scala.beans.BeanProperty
 
 /**
- * Represent the original raw data set as flow input
+ * Represent the original raw data set as flow input.
+ * A dataSetConfig describe the path of source and also format, more importantly, the attributes to be collected from source.
  *
  * @param path
  * @param format
