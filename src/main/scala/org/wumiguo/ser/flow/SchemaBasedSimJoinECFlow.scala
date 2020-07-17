@@ -163,7 +163,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     log.info("[SSJoin] Completed")
   }
 
-  private def generateOutput(finalMap: RDD[(String, String)], outputPath: String, outputType: String, fileName: String = "mapping-"): String = {
+  private def generateOutput(finalMap: RDD[(String, String)], outputPath: String, outputType: String, fileName: String = "mapping"): String = {
     val spark = createLocalSparkSession(getClass.getName)
     import spark.implicits._
     val finalPath = outputPath + "/" + fileName + "-" + outputType.toLowerCase
