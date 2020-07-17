@@ -35,13 +35,16 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "datasets/clean/DblpAcm/dataset1.json")
     val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
     val dataSet1Id = CommandLineUtil.getParameter(args, "dataSet1-id", "realProfileID")
-    val attributes1 = CommandLineUtil.getParameter(args, "attributeSet1", "title")
+    val attributes1 = CommandLineUtil.getParameter(args, "dataSet1-attrSet", "title")
     val dataSet2Path = CommandLineUtil.getParameter(args, "dataSet2", "datasets/clean/DblpAcm/dataset2.json")
     val dataSet2Format = CommandLineUtil.getParameter(args, "dataSet2-format", "json")
     val dataSet2Id = CommandLineUtil.getParameter(args, "dataSet2-id", "realProfileID")
-    val attributes2 = CommandLineUtil.getParameter(args, "attributeSet2", "title")
+    val attributes2 = CommandLineUtil.getParameter(args, "dataSet2-attrSet", "title")
     val q = CommandLineUtil.getParameter(args, "q", "2")
     val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
+    val outputPath = CommandLineUtil.getParameter(args, "outputPath", "output/mapping")
+    val outputType = CommandLineUtil.getParameter(args, "outputType", "json")
+    //val fileName = dataSet1Path.split("/").last + "-" + dataSet2Path.split("/").last
 
     val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
 
@@ -49,13 +52,23 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       Option(attributes1).map(_.split(",")).orNull)
     val dataSet2 = new DataSetConfig(dataSet2Path, dataSet2Format, dataSet2Id,
       Option(attributes2).map(_.split(",")).orNull)
+    log.info("dataSet1=" + dataSet1)
+    log.info("dataSet2=" + dataSet2)
 
     def profileLoader: ProfileLoaderTrait = getProfileLoader(dataSet1.path)
 
     log.debug("resolve profile loader " + profileLoader)
 
-    val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0)
-    val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1)
+    def includeReadIDAttr(config: DataSetConfig): Boolean = {
+      config.dataSetId != null && !config.dataSetId.trim.isEmpty && config.attributes.contains(config.dataSetId)
+    }
+
+    val keepReadID1 = includeReadIDAttr(dataSet1)
+    log.info("keepReadID1=" + keepReadID1)
+    val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1)
+    val keepReadID2 = includeReadIDAttr(dataSet2)
+    log.info("keepReadID2=" + keepReadID2)
+    val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1, keepRealID = keepReadID2)
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
     log.info("profiles1 first=" + profiles1.first())
@@ -91,25 +104,28 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
+    log.info("[SSJoin] match attribute pairs " + attributesMatches.length)
 
-    var matches = attributesMatches(0);
-
-    for (i <- 1 until attributesMatches.length) {
-      matches = matches.intersection(attributesMatches(i))
+    def intersectionMatches: RDD[(Int, Int, Double)] = {
+      var matches = attributesMatches(0);
+      for (i <- 1 until attributesMatches.length) {
+        matches = matches.intersection(attributesMatches(i))
+      }
+      if (attributesMatches.length > 1) matches.cache()
+      matches
     }
 
-    if (attributesMatches.length > 1) matches.cache()
-
+    val matches: RDD[(Int, Int, Double)] = intersectionMatches
     val nm = matches.count()
+    log.info("[SSJoin] Number of matches " + nm)
     val t3 = Calendar.getInstance().getTimeInMillis
     attributePairsArray.foreach(attributesTuple => {
       Option(attributesTuple._1).map(_.unpersist())
       Option(attributesTuple._2).map(_.unpersist())
     })
     attributeses.foreach(_.unpersist())
-    log.info("[SSJoin] Number of matches " + nm)
     log.info("[SSJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
-
+    log.info("[SSJoin] First matches " + matches.first())
     val profiles = profiles1.union(profiles2)
     val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, 0)), 0)
     clusters.cache()
@@ -134,13 +150,31 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     })
 
     val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles)
-
-    val matchesInDiffdataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
-    log.info("[SSJoin] Get matched pairs " + matchesInDiffdataSet.count())
-    matchesInDiffdataSet.foreach(t => println(
-      (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId))))
-
+    profileMatches.take(10).foreach(x => log.info("profileMatches=" + x))
+    val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+    log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
+    matchesInDiffDataSet.take(10).foreach(t => {
+      println("matches-pair=" +
+        (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
+    })
+    val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
+    val finalPath = generateOutput(finalMap, outputPath, outputType)
+    log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
+  }
+
+  private def generateOutput(finalMap: RDD[(String, String)], outputPath: String, outputType: String, fileName: String = "mapping-"): String = {
+    val spark = createLocalSparkSession(getClass.getName)
+    import spark.implicits._
+    val finalPath = outputPath + "/" + fileName + "-" + outputType.toLowerCase
+    val writer = finalMap.toDF.write
+    outputType.toLowerCase match {
+      case "csv" => writer.csv(finalPath)
+      case "json" => writer.json(finalPath)
+      case "parquet" => writer.parquet(finalPath)
+      case _ => throw new RuntimeException("Given type [" + outputType.toLowerCase + "] out of support output type")
+    }
+    finalPath
   }
 
   private def preCheckOnProfile(profiles: RDD[Profile]) = {
@@ -162,6 +196,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     }
     log.info("attributesArray count=" + attributesArray.length)
     log.info("attributesArray _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
+    log.info("attributesArray _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
     attributesArray
   }
 
