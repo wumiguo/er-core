@@ -1,8 +1,10 @@
 package org.wumiguo.ser.flow
 
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Date}
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SaveMode
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.entity.parameter.DataSetConfig
@@ -44,7 +46,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
     val outputPath = CommandLineUtil.getParameter(args, "outputPath", "output/mapping")
     val outputType = CommandLineUtil.getParameter(args, "outputType", "json")
-    //val fileName = dataSet1Path.split("/").last + "-" + dataSet2Path.split("/").last
+    val joinResultFile = CommandLineUtil.getParameter(args, "joinResultFile", "mapping")
+    val overwriteOnExist = CommandLineUtil.getParameter(args, "overwriteOnExist", "false")
 
     val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
 
@@ -158,16 +161,25 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
         (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
     })
     val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
-    val finalPath = generateOutput(finalMap, outputPath, outputType)
+    val overwriteOnExistBool = overwriteOnExist == "true" || overwriteOnExist == "1"
+    val finalPath = generateOutput(finalMap, outputPath, outputType, joinResultFile, overwriteOnExistBool)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
   }
 
-  private def generateOutput(finalMap: RDD[(String, String)], outputPath: String, outputType: String, fileName: String = "mapping"): String = {
+  private def generateOutput(finalMap: RDD[(String, String)], outputPath: String, outputType: String, fileName: String = "", overwrite: Boolean = false): String = {
     val spark = createLocalSparkSession(getClass.getName)
     import spark.implicits._
-    val finalPath = outputPath + "/" + fileName + "-" + outputType.toLowerCase
+    val finalPath = if (fileName == null || fileName == "") {
+      val inputFormat = new SimpleDateFormat("yyyy-MM-dd_HHmmss")
+      outputPath + "/" + inputFormat.format(new Date()) + "-" + outputType
+    } else {
+      outputPath + "/" + fileName + "-" + outputType
+    }
     val writer = finalMap.toDF.write
+    if (overwrite) {
+      writer.mode(SaveMode.Overwrite)
+    }
     outputType.toLowerCase match {
       case "csv" => writer.csv(finalPath)
       case "json" => writer.json(finalPath)
