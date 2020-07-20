@@ -71,7 +71,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1)
     val keepReadID2 = includeReadIDAttr(dataSet2)
     log.info("keepReadID2=" + keepReadID2)
-    val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = profiles1.count().intValue(), sourceId = 1, keepRealID = keepReadID2)
+    val secondEPStartID = profiles1.count().intValue()
+    val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = secondEPStartID, sourceId = 1, keepRealID = keepReadID2)
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
     log.info("profiles1 first=" + profiles1.first())
@@ -130,7 +131,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     log.info("[SSJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
     log.info("[SSJoin] First matches " + matches.first())
     val profiles = profiles1.union(profiles2)
-    val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, 0)), 0)
+    val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
     clusters.cache()
     val cn = clusters.count()
     val t4 = Calendar.getInstance().getTimeInMillis
@@ -152,12 +153,12 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       pairs
     })
 
-    val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles)
-    profileMatches.take(10).foreach(x => log.info("profileMatches=" + x))
+    val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles, secondEPStartID)
+    profileMatches.take(5).foreach(x => log.info("profileMatches=" + x))
     val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
     log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
-    matchesInDiffDataSet.take(10).foreach(t => {
-      println("matches-pair=" +
+    matchesInDiffDataSet.take(5).foreach(t => {
+      log.info("matches-pair=" +
         (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
     })
     val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
@@ -213,13 +214,21 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
   }
 
 
-  def mapMatchesWithProfiles(matchedPairs: RDD[(Int, Int)], profiles: RDD[Profile]): RDD[(Profile, Profile)] = {
+  def mapMatchesWithProfiles(matchedPairs: RDD[(Int, Int)], profiles: RDD[Profile], secondEPStartID: Int): RDD[(Profile, Profile)] = {
     val profilesById = profiles.keyBy(_.id)
-
-    matchedPairs.keyBy(_._1).
-      join(profilesById).
+    val matchedPairsById = matchedPairs.keyBy(_._1)
+    val joinResult = matchedPairsById.join(profilesById)
+    joinResult.
       map(t => (t._2._1._2, t._2._2)).keyBy(_._1).
-      join(profilesById).map(t => (t._2._1._2, t._2._2))
+      join(profilesById).map(t => {
+      val id1 = t._2._1._2
+      val id2 = t._2._2
+      if (id1.id < secondEPStartID) {
+        (id1, id2)
+      } else {
+        (id2, id1)
+      }
+    })
   }
 
 

@@ -27,6 +27,7 @@ class ConnectedComponentsClusteringTest extends FlatSpec with SparkEnvSetup {
     val similarPairs1 = ccc1.sortBy(_._2.size, false).first()
     assert(2 == ccc1.count())
     assertResult((0, Set(11, 12, 1111)))(similarPairs1)
+    // higher threshold the less item in likelihood scope
     val ccc2 = ConnectedComponentsClustering.getClusters(profiles, candiPairs, 0, 0.5)
     ccc2.foreach(x => println("connected2=" + x))
     val similarPairs2 = ccc2.sortBy(_._2.size, false).first()

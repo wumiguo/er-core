@@ -18,10 +18,12 @@ object CallERFlowLauncher {
     flowArgs +:= "dataSet2-format=" + "csv"
     flowArgs +:= "dataSet2-attrSet=" + "p_id"
     flowArgs +:= "q=2"
-    flowArgs +:= "threshold=0"//0,1,2
+    flowArgs +:= "threshold=2" //0,1,2
     flowArgs +:= "algorithm=EDJoin"
-    flowArgs +:= "outputPath=" + "/Users/mac/Development/learn/er-job/data-er-output/trade-product"
+    flowArgs +:= "outputPath=" + "/Users/mac/Development/learn/er-spark/output/trade-product"
     flowArgs +:= "outputType=" + "csv"
+    flowArgs +:= "joinResultFile=" + "aa"
+    flowArgs +:= "overwriteOnExist=" + "true"
     ERFlowLauncher.main(flowArgs)
   }
 }
