@@ -1,7 +1,7 @@
 package org.wumiguo.ser
 
 import org.slf4j.LoggerFactory
-import org.wumiguo.ser.flow.{End2EndSimpleFlow3, SchemaBasedSimJoinECFlow, SchemaBasedSimJoinECFlowSample}
+import org.wumiguo.ser.flow.{ERFlow, End2EndSimpleFlow, End2EndSimpleFlowSample, SchemaBasedSimJoinECFlow, SchemaBasedSimJoinECFlowSample}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 
 /**
@@ -15,14 +15,14 @@ object ERFlowLauncher {
   def main(args: Array[String]): Unit = {
     log.info("start spark-er flow now")
     val flowType = CommandLineUtil.getParameter(args, "flowType", "SSJoin")
-    flowType match {
-      case "End2End" =>
-        //End2EndSimpleFlow2.run(Array[String](""))
-        End2EndSimpleFlow3.run(args)
-      case "SSJoinSample" => SchemaBasedSimJoinECFlowSample.run(args)
-      case "SSJoin" => SchemaBasedSimJoinECFlow.run(args)
+    val flow: ERFlow = flowType match {
+      case "End2End" => End2EndSimpleFlow
+      case "End2EndSample" => End2EndSimpleFlowSample
+      case "SSJoinSample" => SchemaBasedSimJoinECFlowSample
+      case "SSJoin" => SchemaBasedSimJoinECFlow
       case _ => throw new RuntimeException("Unsupported flow type " + flowType)
     }
+    flow.run(args)
     log.info("end spark-er flow now")
   }
 }

@@ -15,7 +15,7 @@ import org.wumiguo.ser.methods.util.Converters
  *         Created on 2020/7/06
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object End2EndSimpleFlow3 extends ERFlow with SparkEnvSetup {
+object End2EndSimpleFlowSample extends ERFlow with SparkEnvSetup {
   //val log = LoggerFactory.getLogger(getClass.getName)
 
   def run(args: Array[String]) = {
