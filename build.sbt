@@ -6,6 +6,8 @@ version := "0.1"
 
 scalaVersion := "2.11.8"
 
+val scalaTestVersion = "2.2.5"
+
 initialize := {
   val _ = initialize.value // run the previous initialization
   val required = "1.8"
@@ -49,8 +51,20 @@ libraryDependencies += "org.jgrapht" % "jgrapht-core" % "0.9.0"//% "1.0.1"
 libraryDependencies += "org.json" % "json" % "20170516"
 
 //https://www.scalatest.org
-libraryDependencies += "org.scalactic" %% "scalactic" % "2.2.5"
+libraryDependencies += "org.scalactic" %% "scalactic" % scalaTestVersion
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.5" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
 
-//mainClass in Compile := Some("Experiments.Main")
+mainClass in Compile := Some("org.wumiguo.ser.ERFlowLauncher")
+
+jacocoReportSettings := JacocoReportSettings()
+  .withTitle("CodeCoverage")
+  .withThresholds(
+    JacocoThresholds(
+      instruction = 20,
+      method = 24,
+      branch = 14,
+      complexity = 19,
+      line = 21,
+      clazz = 20)
+  )

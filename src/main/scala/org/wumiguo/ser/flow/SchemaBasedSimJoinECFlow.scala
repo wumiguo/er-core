@@ -15,6 +15,7 @@ import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.io.File
 
@@ -33,6 +34,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     if (!outputDir.exists) {
       outputDir.createDirectory(true)
     }
+    val options = FlowOptions.getOptions(args)
+    log.info("flowOptions=" + options)
     val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
     val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "datasets/clean/DblpAcm/dataset1.json")
     val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
@@ -42,14 +45,14 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val dataSet2Format = CommandLineUtil.getParameter(args, "dataSet2-format", "json")
     val dataSet2Id = CommandLineUtil.getParameter(args, "dataSet2-id", "realProfileID")
     val attributes2 = CommandLineUtil.getParameter(args, "dataSet2-attrSet", "title")
-    val q = CommandLineUtil.getParameter(args, "q", "2")
-    val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
     val outputPath = CommandLineUtil.getParameter(args, "outputPath", "output/mapping")
     val outputType = CommandLineUtil.getParameter(args, "outputType", "json")
     val joinResultFile = CommandLineUtil.getParameter(args, "joinResultFile", "mapping")
     val overwriteOnExist = CommandLineUtil.getParameter(args, "overwriteOnExist", "false")
 
-    val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
+    //    val q = CommandLineUtil.getParameter(args, "q", "2")
+    //    val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
+    //    val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
 
     val dataSet1 = new DataSetConfig(dataSet1Path, dataSet1Format, dataSet1Id,
       Option(attributes1).map(_.split(",")).orNull)
@@ -82,7 +85,9 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       "If dataSet 2 exist, the number of attribute use to compare between dataSet 1 and dataSet 2 should be equal")
 
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
-
+    val q = options.get("q").getOrElse("2")
+    val algorithm = options.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
+    val threshold = options.get("threshold").getOrElse("2")
     val t1 = Calendar.getInstance().getTimeInMillis
     var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
     var attributeses = ArrayBuffer[RDD[(Int, String)]]()
@@ -129,7 +134,9 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     })
     attributeses.foreach(_.unpersist())
     log.info("[SSJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
-    log.info("[SSJoin] First matches " + matches.first())
+    if (nm > 0) {
+      log.info("[SSJoin] First matches " + matches.first())
+    }
     val profiles = profiles1.union(profiles2)
     val clusters = ConnectedComponentsClustering.getClusters(profiles, matches.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
     clusters.cache()
