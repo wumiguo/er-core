@@ -9,9 +9,7 @@ import org.wumiguo.ser.methods.datastructure.{BlockAbstract, BlockClean, BlockDi
 
 /**
  * Implements the token blocking
- *
- * @author Luca Gagliardelli
- * @since 2016/12/07
+ * includes the method to generate block from profile input
  */
 object TokenBlocking {
 

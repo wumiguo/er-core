@@ -1,12 +1,10 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  *
-  * Edge trait
-  *
-  * @author Song Zhu
-  * @since 2016-12-14
-  */
+ * @author levinliu
+ * Created on 2020/6/11
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ */
 trait EdgeTrait {
   /* First profile ID */
   val firstProfileID : Int

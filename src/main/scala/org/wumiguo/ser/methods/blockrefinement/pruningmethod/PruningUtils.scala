@@ -7,8 +7,6 @@ import org.wumiguo.ser.methods.datastructure.{ProfileBlocks, UnweightedEdge}
 /**
  * Contains common objects between differents pruning methods.
  *
- * @author Luca Gagliardelli
- * @since 2017/03/06
  */
 object PruningUtils {
 

@@ -16,10 +16,6 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleGraph;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
-/**
- *
- * @author manos
- */
 
 public class GomoryHuTree<V, E> {
 

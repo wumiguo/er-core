@@ -4,10 +4,8 @@ import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.datastructure.ProfileBlocks
 
 /**
- * Implements the block filtering
- *
- * @author Luca Gagliardelli
- * @since 2016/12/08
+ * Created on 2020/6/11
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 object BlockFiltering {
 

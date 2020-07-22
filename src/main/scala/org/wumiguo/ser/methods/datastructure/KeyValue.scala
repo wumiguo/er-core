@@ -1,8 +1,8 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  * Represents an attribute value with his key
-  * @author Luca Gagliardelli
-  * @since 2016/12/07
-  */
+ * represent a attribute (key=attributeName,value=attributeValue)
+ * @param key
+ * @param value
+ */
 case class KeyValue(key : String, value : String) extends Serializable{}

@@ -1,24 +1,25 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  * Represents a profile
-  *
-  * @author Giovanni Simonini
-  * @since 2016/07/12
-  */
+ * Represent a profile with it's attributes, sourceId
+ * e.g. Profile(123,[("title","helloworld"),("publishDate","20200722")],"P0123",1)
+ */
+/**
+ * @author levinliu
+ *         Created on 2020/6/11
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ */
 case class Profile(id: Int,
                    attributes: scala.collection.mutable.MutableList[KeyValue] = new scala.collection.mutable.MutableList(),
                    originalID: String = "",
                    sourceId: Int = 0) extends ProfileTrait with Serializable {
 
   /**
-    * Add an attribute to the list of attributes
-    *
-    * @param a attribute to add
-    **/
+   * Add an attribute to the list of attributes
+   *
+   * @param a attribute to add
+   **/
   def addAttribute(a: KeyValue): Unit = {
     attributes += a
   }
-
-  // todo If we have no attributes (e.g. a single doc), we have a single element in the list
 }

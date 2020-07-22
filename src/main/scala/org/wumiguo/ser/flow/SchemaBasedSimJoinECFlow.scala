@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date}
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.entity.parameter.DataSetConfig
@@ -37,6 +37,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val options = FlowOptions.getOptions(args)
     log.info("flowOptions=" + options)
     val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
+    printContext(spark)
     val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "datasets/clean/DblpAcm/dataset1.json")
     val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
     val dataSet1Id = CommandLineUtil.getParameter(args, "dataSet1-id", "realProfileID")
@@ -173,6 +174,15 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val finalPath = generateOutput(finalMap, outputPath, outputType, joinResultFile, overwriteOnExistBool)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
+  }
+
+  private def printContext(spark: SparkSession) = {
+    log.info("-sparkContext master=" + spark.sparkContext.master)
+    log.info("-sparkContext user=" + spark.sparkContext.sparkUser)
+    log.info("-sparkContext startTime=" + spark.sparkContext.startTime)
+    log.info("-sparkContext appName=" + spark.sparkContext.appName)
+    log.info("-sparkContext applicationId=" + spark.sparkContext.applicationId)
+    log.info("-sparkContext getConf=" + spark.sparkContext.getConf)
   }
 
   private def generateOutput(finalMap: RDD[(String, String)], outputPath: String, outputType: String, fileName: String = "", overwrite: Boolean = false): String = {

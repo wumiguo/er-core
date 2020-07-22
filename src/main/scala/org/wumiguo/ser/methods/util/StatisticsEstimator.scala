@@ -9,9 +9,6 @@ import org.wumiguo.ser.methods.datastructure._
 /**
   * Contains differents methods to estimate
   * PC and PQ.
-  *
-  * @author Luca Gagliardelli, Song Zhu
-  * @since 2016/12/11
   */
 object StatisticsEstimator {
   /**

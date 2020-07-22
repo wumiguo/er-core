@@ -1,11 +1,9 @@
 package org.wumiguo.ser.methods.datastructure
 
 /**
-  * Represents a generic block.
-  *
-  * @author Giovanni Simonini
-  * @since 2016/12/07
-  */
+ * Represent the high level block
+ * it tells user a blockKey(e.g. "hello") and its occurrences in all given profiles
+ */
 trait BlockAbstract extends Ordered[BlockAbstract] {
   val blockingKey: String
   /** Id of the block */

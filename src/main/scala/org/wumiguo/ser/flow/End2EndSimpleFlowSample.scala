@@ -33,7 +33,7 @@ object End2EndSimpleFlowSample extends ERFlow with SparkEnvSetup {
     val ep1Path = getClass.getClassLoader.getResource("sampledata/acmProfiles.mini.gen.csv").getPath
     val profileLoader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(ep1Path))
     //val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIDFrom, separator, header = true, sourceId = sourceId1)
-    val ep1Rdd = profileLoader.load(ep1Path,startIDFrom,"",sourceId1)
+    val ep1Rdd = profileLoader.load(ep1Path, startIDFrom, "", sourceId1)
     log.info("ep1 size is {}", ep1Rdd.count())
     val secondProfileStartIDFrom = ep1Rdd.count().toInt - 1 + startIDFrom
     val ep2Path = getClass.getClassLoader.getResource("sampledata/dblpProfiles.mini.gen.csv").getPath
@@ -58,7 +58,7 @@ object End2EndSimpleFlowSample extends ERFlow with SparkEnvSetup {
     // block cleaning
     val profileBlockFilter1 = BlockFiltering.blockFiltering(profileBlocks, ratio = 0.75)
     log.info("pb-detail-bf count " + profileBlockFilter1.count() + " first " + profileBlockFilter1.first())
-    profileBlockFilter1.take(5).foreach(x => println("blockPurge=" + x))
+    profileBlockFilter1.take(5).foreach(x => log.info("blockPurge=" + x))
     // comparision cleaning
     val abRdd1 = Converters.profilesBlockToBlocks(profileBlockFilter1, separatorIDs = separators)
     val pAbRdd1 = BlockPurging.blockPurging(abRdd1, 0.6)

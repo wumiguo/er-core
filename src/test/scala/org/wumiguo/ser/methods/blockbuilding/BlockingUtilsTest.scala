@@ -7,7 +7,7 @@ import org.scalatest.FlatSpec
  * Created on 2020/6/11
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class BlockingUtilsSpec extends FlatSpec {
+class BlockingUtilsTest extends FlatSpec {
   it should "(Int,Seq) to Iterable(tuple)" in {
     val profileEntryKeys = (1, Seq("welcome", "to", "ER", "spark", "ER"))
     val out = BlockingUtils.associateKeysToProfileID(profileEntryKeys)
