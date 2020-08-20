@@ -20,6 +20,9 @@ sbt "testOnly *DataTypeR*"
 ## Put it into local repo
 sbt compile package publishLocal
 
+or
+
+mvn clean install
 ## Compatibility Setting
 
 JDK : 1.8_251
