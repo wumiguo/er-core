@@ -1,7 +1,8 @@
 package org.wumiguo.ser.dataloader
 
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
+import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
 import org.wumiguo.ser.methods.datastructure.{KeyValue, MatchingEntities, Profile}
 import org.wumiguo.ser.testutil.TestDirs
 
@@ -12,7 +13,7 @@ import scala.collection.mutable
  *         Created on 2020/6/19
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class CSVProfileLoaderTest extends FlatSpec with SparkEnvSetup {
+class CSVProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(this.getClass.getName)
 
   it should "load ground truth with header" in {
@@ -83,6 +84,71 @@ class CSVProfileLoaderTest extends FlatSpec with SparkEnvSetup {
       KeyValue("title", "The WASA2 object-oriented workflow management system"),
       KeyValue("venue", "International Conference on Management of Data"),
       KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "0", 0)
+    )(ep1Rdd.first())
+  }
+
+  it should "load with filter type1" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val startIdFrom = 1
+    val fieldValuesScope = List(KeyValue("year", "2010"), KeyValue("year", "2018"))
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+      fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
+    println("ep1Rdd " + ep1Rdd.count())
+    ep1Rdd.foreach(x => println("epx " + x))
+    assert(7 == ep1Rdd.count())
+    assertResult(Profile(1, mutable.MutableList(
+      KeyValue("title", "The WASA2 object-oriented workflow management system"),
+      KeyValue("venue", "International Conference on Management of Data"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "2010", 0)
+    )(ep1Rdd.first())
+  }
+
+  it should "load with filter type2" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val startIdFrom = 1
+    val fieldValuesScope = List(KeyValue("year", "2010"), KeyValue("authors", "Gottfried Vossen, Mathias Weske"))
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+      fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
+    println("ep1Rdd " + ep1Rdd.count())
+    ep1Rdd.foreach(x => println("epx " + x))
+    assert(1 == ep1Rdd.count())
+    assertResult(Profile(1, mutable.MutableList(
+      KeyValue("title", "The WASA2 object-oriented workflow management system"),
+      KeyValue("venue", "International Conference on Management of Data"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "2010", 0)
+    )(ep1Rdd.first())
+  }
+
+  it should "load with filter type3" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val startIdFrom = 1
+    val fieldValuesScope = List(KeyValue("year", "2010"), KeyValue("year", "2018"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske"),KeyValue("authors","Bart Meltzer, Robert Glushko"))
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+      fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
+    println("ep1Rdd " + ep1Rdd.count())
+    ep1Rdd.foreach(x => println("epx " + x))
+    assert(2 == ep1Rdd.count())
+    assertResult(Profile(1, mutable.MutableList(
+      KeyValue("title", "The WASA2 object-oriented workflow management system"),
+      KeyValue("venue", "International Conference on Management of Data"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "2010", 0)
+    )(ep1Rdd.first())
+  }
+
+  it should "load with filter type4" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val startIdFrom = 1
+    val fieldValuesScope = List()
+    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+      fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
+    println("ep1Rdd " + ep1Rdd.count())
+    ep1Rdd.foreach(x => println("epx " + x))
+    assert(15 == ep1Rdd.count())
+    assertResult(Profile(1, mutable.MutableList(
+      KeyValue("title", "The WASA2 object-oriented workflow management system"),
+      KeyValue("venue", "International Conference on Management of Data"),
+      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "2010", 0)
     )(ep1Rdd.first())
   }
 }

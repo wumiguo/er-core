@@ -4,12 +4,14 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date}
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{Row, SaveMode, SparkSession}
 import org.wumiguo.ser.common.SparkEnvSetup
+import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
 import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.entity.parameter.DataSetConfig
 import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
-import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
+import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
@@ -34,14 +36,18 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     if (!outputDir.exists) {
       outputDir.createDirectory(true)
     }
-    val options = FlowOptions.getOptions(args)
-    log.info("flowOptions=" + options)
+    val flowOptions = FlowOptions.getOptions(args)
+    log.info("flowOptions=" + flowOptions)
     val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
     printContext(spark)
     val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "datasets/clean/DblpAcm/dataset1.json")
     val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
     val dataSet1Id = CommandLineUtil.getParameter(args, "dataSet1-id", "realProfileID")
     val attributes1 = CommandLineUtil.getParameter(args, "dataSet1-attrSet", "title")
+    val moreAttr1ToExtract = CommandLineUtil.getParameter(args, "dataSet1-additionalAttrSet", "title")
+    val moreAttr1s = moreAttr1ToExtract.split(",")
+    val moreAttr2ToExtract = CommandLineUtil.getParameter(args, "dataSet2-additionalAttrSet", "title")
+    val moreAttr2s = moreAttr2ToExtract.split(",")
     val dataSet2Path = CommandLineUtil.getParameter(args, "dataSet2", "datasets/clean/DblpAcm/dataset2.json")
     val dataSet2Format = CommandLineUtil.getParameter(args, "dataSet2-format", "json")
     val dataSet2Id = CommandLineUtil.getParameter(args, "dataSet2-id", "realProfileID")
@@ -51,9 +57,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val joinResultFile = CommandLineUtil.getParameter(args, "joinResultFile", "mapping")
     val overwriteOnExist = CommandLineUtil.getParameter(args, "overwriteOnExist", "false")
 
-    //    val q = CommandLineUtil.getParameter(args, "q", "2")
-    //    val threshold = CommandLineUtil.getParameter(args, "threshold", "2")
-    //    val algorithm = CommandLineUtil.getParameter(args, "algorithm", ALGORITHM_EDJOIN)
+
+    val joinFieldsWeight = CommandLineUtil.getParameter(args, "joinFieldsWeight", "")
 
     val dataSet1 = new DataSetConfig(dataSet1Path, dataSet1Format, dataSet1Id,
       Option(attributes1).map(_.split(",")).orNull)
@@ -72,13 +77,31 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
 
     val keepReadID1 = includeReadIDAttr(dataSet1)
     log.info("keepReadID1=" + keepReadID1)
-    val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId, startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1)
+
+    val p1FilterOptions = FilterOptions.getOptions("dataSet1", args)
+    log.info("p1FilterOptions=" + p1FilterOptions)
+    val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId,
+      startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1,
+      fieldValuesScope = p1FilterOptions,
+      filter = SpecificFieldValueFilter
+    )
     val keepReadID2 = includeReadIDAttr(dataSet2)
     log.info("keepReadID2=" + keepReadID2)
     val secondEPStartID = profiles1.count().intValue()
-    val profiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId, startIDFrom = secondEPStartID, sourceId = 1, keepRealID = keepReadID2)
+    log.info("profiles1 count=" + profiles1.count())
+
+    val p2FilterOptions = FilterOptions.getOptions("dataSet2", args)
+    log.info("p2FilterOptions=" + p2FilterOptions)
+    val profiles2 = profileLoader.load(
+      dataSet2.path, realIDField = dataSet2.dataSetId,
+      startIDFrom = secondEPStartID,
+      sourceId = 1, keepRealID = keepReadID2,
+      fieldValuesScope = p2FilterOptions,
+      filter = SpecificFieldValueFilter)
+    log.info("profiles2 count=" + profiles2.count())
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
+
     log.info("profiles1 first=" + profiles1.first())
     log.info("profiles2 first=" + profiles2.first())
 
@@ -86,9 +109,9 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       "If dataSet 2 exist, the number of attribute use to compare between dataSet 1 and dataSet 2 should be equal")
 
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
-    val q = options.get("q").getOrElse("2")
-    val algorithm = options.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
-    val threshold = options.get("threshold").getOrElse("2")
+    val q = flowOptions.get("q").getOrElse("2")
+    val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
+    val threshold = flowOptions.get("threshold").getOrElse("2")
     val t1 = Calendar.getInstance().getTimeInMillis
     var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
     var attributeses = ArrayBuffer[RDD[(Int, String)]]()
@@ -169,9 +192,55 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       log.info("matches-pair=" +
         (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
     })
+    log.info("moreAttr1s=" + moreAttr1s.toList)
+    log.info("moreAttr2s=" + moreAttr2s.toList)
     val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
+    val p1IDFilterOption = finalMap.map(x => KeyValue(dataSet1Id, x._1)).toLocalIterator.toList
+    val finalProfiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId,
+      startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1, fieldsToKeep = moreAttr1s.toList,
+      fieldValuesScope = p1IDFilterOption,
+      filter = SpecificFieldValueFilter
+    )
+    val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+    val p2IDFilterOption = finalMap.map(x => KeyValue(dataSet2Id, x._2)).toLocalIterator.toList
+    val finalProfiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId,
+      startIDFrom = 0, sourceId = 0, keepRealID = keepReadID2, fieldsToKeep = moreAttr2s.toList,
+      fieldValuesScope = p2IDFilterOption,
+      filter = SpecificFieldValueFilter
+    )
+    finalProfiles1.foreach(x => log.info("fp1 " + x))
+    finalProfiles2.foreach(x => log.info("fp2 " + x))
+    log.info("p1b=" + finalProfiles1.count())
+    log.info("p2b=" + finalProfiles2.count())
+    val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+    var columnNames = Seq[String]()
+    columnNames :+= "Profile1ID"
+    columnNames ++= moreAttr1s
+    columnNames :+= "Profile2ID"
+    columnNames ++= moreAttr2s
+    val formatFinalMap = finalMap.map(x => {
+      var entry = Seq[String](x._1)
+      val attr1 = p1B.value.filter(p => {
+        log.info("p1b " + p.originalID + " vs " + x._1)
+        p.originalID == x._1
+      }).flatMap(p => p.attributes)
+      entry ++= moreAttr1s.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
+      log.info("attr12 " + attr1.toList + " entry " + entry)
+      entry :+= x._2
+      val attr2 = p2B.value.filter(p => {
+        log.info("p2b " + p.originalID + " vs " + x._1)
+
+        p.originalID == x._2
+      }).flatMap(p => p.attributes)
+      entry ++= moreAttr2s.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
+      log.info("attr12 " + attr2.toList + " entry " + entry)
+      //Row(entry: _*)
+      val r = Row.fromSeq(entry)
+      log.info("row=" + r)
+      r
+    })
     val overwriteOnExistBool = overwriteOnExist == "true" || overwriteOnExist == "1"
-    val finalPath = generateOutput(finalMap, outputPath, outputType, joinResultFile, overwriteOnExistBool)
+    val finalPath = generateOutputWithSchema(spark, columnNames, formatFinalMap, outputPath, outputType, joinResultFile, overwriteOnExistBool)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
   }
@@ -195,6 +264,48 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       outputPath + "/" + fileName + "-" + outputType
     }
     val writer = finalMap.toDF.write
+    if (overwrite) {
+      writer.mode(SaveMode.Overwrite)
+    }
+    outputType.toLowerCase match {
+      case "csv" => writer.csv(finalPath)
+      case "json" => writer.json(finalPath)
+      case "parquet" => writer.parquet(finalPath)
+      case _ => throw new RuntimeException("Given type [" + outputType.toLowerCase + "] out of support output type")
+    }
+    finalPath
+  }
+
+  private def generateOutputWithSchema(spark: SparkSession, columnNames: Seq[String], finalMap: RDD[Row],
+                                       outputPath: String, outputType: String, fileName: String = "",
+                                       overwrite: Boolean = false) = {
+    import org.apache.spark.sql.types._
+    var fields = mutable.MutableList[StructField]()
+    log.info("column names " + columnNames)
+    columnNames.map(cn => fields :+= StructField(cn, StringType, nullable = true))
+    val schema = StructType(fields)
+    generateOutputAdvanced(spark, schema, finalMap,
+      outputPath, outputType, fileName,
+      overwrite, true)
+  }
+
+  private def generateOutputAdvanced(spark: SparkSession, schema: StructType, finalMap: RDD[Row],
+                                     outputPath: String, outputType: String, fileName: String = "",
+                                     overwrite: Boolean = false,
+                                     showHeader: Boolean = false): String = {
+    val spark = createLocalSparkSession(getClass.getName)
+    import spark.implicits._
+    val df = spark.createDataFrame(finalMap, schema)
+    val finalPath = if (fileName == null || fileName == "") {
+      val inputFormat = new SimpleDateFormat("yyyy-MM-dd_HHmmss")
+      outputPath + "/" + inputFormat.format(new Date()) + "-" + outputType
+    } else {
+      outputPath + "/" + fileName + "-" + outputType
+    }
+    val writer = df.write
+    if (showHeader) {
+      writer.option("header", true)
+    }
     if (overwrite) {
       writer.mode(SaveMode.Overwrite)
     }

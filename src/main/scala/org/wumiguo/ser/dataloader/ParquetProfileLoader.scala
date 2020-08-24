@@ -3,15 +3,25 @@ package org.wumiguo.ser.dataloader
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.wumiguo.ser.dataloader.JSONWrapper.parseData
-import org.wumiguo.ser.methods.datastructure.Profile
+import org.wumiguo.ser.dataloader.filter.{DummyFieldFilter, FieldFilter}
+import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 
 object ParquetProfileLoader extends ProfileLoaderTrait {
 
-  override def load(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int, fieldsToKeep: List[String], withReadID: Boolean = false): RDD[Profile] = {
-    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField, sourceId = sourceId)
+  override def load(filePath: String, startIDFrom: Int, realIDField: String,
+                    sourceId: Int, fieldsToKeep: List[String], withReadID: Boolean = false,
+                    filter: FieldFilter = DummyFieldFilter,
+                    fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
+    loadProfilesAdvanceMode(filePath, startIDFrom,
+      realIDField = realIDField, sourceId = sourceId,
+      filter = filter,
+      fieldValuesScope = fieldValuesScope)
   }
 
-  def loadProfilesAdvanceMode(filePath: String, startIDFrom: Int = 0, separator: String = ",", realIDField: String = "-1", sourceId: Int = 0): RDD[Profile] = {
+  def loadProfilesAdvanceMode(filePath: String, startIDFrom: Int = 0, separator: String = ",",
+                              realIDField: String = "-1", sourceId: Int = 0,
+                              filter: FieldFilter = DummyFieldFilter,
+                              fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
 
     val df = sparkSession.read.parquet(filePath)
@@ -35,7 +45,6 @@ object ParquetProfileLoader extends ProfileLoaderTrait {
       }
       p
     }
-
   }
 
 }

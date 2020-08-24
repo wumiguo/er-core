@@ -3,6 +3,7 @@ package org.wumiguo.ser.dataloader
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.json.{JSONArray, JSONObject}
+import org.wumiguo.ser.dataloader.filter.{DummyFieldFilter, FieldFilter}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 
 /**
@@ -42,7 +43,9 @@ object JSONProfileLoader extends ProfileLoaderTrait {
    * @return Profile Rdd with selected fields
    */
   override def load(filePath: String, startIDFrom: Int = 0, realIDField: String = "", sourceId: Int = 0,
-                    fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false): RDD[Profile] = {
+                    fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false,
+                    filter: FieldFilter = DummyFieldFilter,
+                    fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
     val sc = SparkContext.getOrCreate()
     val raw = sc.textFile(filePath, sc.defaultParallelism)
 

@@ -6,7 +6,8 @@ version := "0.1"
 
 scalaVersion := "2.11.8"
 
-val scalaTestVersion = "2.2.5"
+//val scalaTestVersion = "2.2.5"
+val scalaTestVersion = "3.1.2"
 
 initialize := {
   val _ = initialize.value // run the previous initialization

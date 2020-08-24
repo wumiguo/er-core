@@ -2,6 +2,7 @@ package org.wumiguo.ser.dataloader
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
+import org.wumiguo.ser.dataloader.filter.{DummyFieldFilter, FieldFilter}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 
 import scala.collection.mutable.MutableList
@@ -23,7 +24,9 @@ trait ProfileLoaderTrait {
    * @return Profile Rdd with selected fields
    */
   def load(filePath: String, startIDFrom: Int = 0, realIDField: String,
-           sourceId: Int = 0, fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false): RDD[Profile]
+           sourceId: Int = 0, fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false,
+           filter: FieldFilter = DummyFieldFilter,
+           fieldValuesScope: List[KeyValue] = Nil): RDD[Profile]
 
   /**
    * Given a row return the list of attributes
