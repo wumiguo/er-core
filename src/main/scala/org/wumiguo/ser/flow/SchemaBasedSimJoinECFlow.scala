@@ -184,10 +184,14 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
         fieldValuesScope = p2IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      finalProfiles1.foreach(x => log.info("fp1 " + x))
-      finalProfiles2.foreach(x => log.info("fp2 " + x))
-      log.info("p1b=" + finalProfiles1.count())
-      log.info("p2b=" + finalProfiles2.count())
+      if (!finalProfiles1.isEmpty()) {
+        finalProfiles1.take(3).foreach(x => log.info("fp1=" + x))
+      }
+      if (!finalProfiles2.isEmpty()) {
+        finalProfiles2.take(3).foreach(x => log.info("fp2=" + x))
+      }
+      log.info("fp1count=" + finalProfiles1.count())
+      log.info("fp2count=" + finalProfiles2.count())
       val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(moreAttr1s, moreAttr2s, showSimilarity)
       val rows = finalMap2.map(x => {
@@ -208,10 +212,12 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       profileMatches.take(5).foreach(x => log.info("profileMatches=" + x))
       val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
       log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
-      matchesInDiffDataSet.take(5).foreach(t => {
-        log.info("matches-pair=" +
-          (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
-      })
+      if (!matchesInDiffDataSet.isEmpty()) {
+        matchesInDiffDataSet.take(5).foreach(t => {
+          log.info("matches-pair=" +
+            (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
+        })
+      }
       log.info("moreAttr1s=" + moreAttr1s.toList)
       log.info("moreAttr2s=" + moreAttr2s.toList)
       log.info("matchesInDiffDataSet1 size =" + matchesInDiffDataSet.count())
@@ -231,10 +237,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
         fieldValuesScope = p2IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      finalProfiles1.foreach(x => log.info("fp1 " + x))
-      finalProfiles2.foreach(x => log.info("fp2 " + x))
-      log.info("p1b=" + finalProfiles1.count())
-      log.info("p2b=" + finalProfiles2.count())
+      finalProfiles1.foreach(x => log.info("fp1=" + x))
+      finalProfiles2.foreach(x => log.info("fp2=" + x))
+      log.info("fp1count=" + finalProfiles1.count())
+      log.info("fp2count=" + finalProfiles2.count())
       val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(moreAttr1s, moreAttr2s, showSimilarity)
       val rows = finalMap.map(x => {
@@ -260,8 +266,9 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     attributePairsArray.foreach(attributesTuple => {
       val attributes1 = attributesTuple._1
       val attributes2 = attributesTuple._2
-      log.info("attributes1 first = " + attributes1.first() + " 2 " + attributes2.first())
-
+      if (!attributes1.isEmpty()) {
+        log.info("attributes1-first = " + attributes1.first() + " attributes2-first " + attributes2.first())
+      }
       val attributesMatch: RDD[(Int, Int, Double)] =
         algorithm match {
           case ALGORITHM_EDJOIN =>
@@ -313,9 +320,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       }
     }).keyBy(x => (x._1, x._2))
     val data = mp.join(detail)
-    log.info("print mp")
-    mp.foreach(x => log.info("mp " + x))
-    data.foreach(x => log.info("data " + x))
     data.map(x => x._2._2)
   }
 
