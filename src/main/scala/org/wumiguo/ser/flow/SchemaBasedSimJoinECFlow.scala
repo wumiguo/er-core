@@ -99,7 +99,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
 
     val matchDetails: RDD[(Int, Int, Double)] = if (!weighted) {
       log.info("run with weightedMatches")
-      weightedMatches(spark, attributesMatches.toArray, weightValues)
+      weightedMatches(attributesMatches.toArray, weightValues)
     } else {
       log.info("run with intersectionMatches")
       intersectionMatches(attributesMatches.toArray)
@@ -165,16 +165,15 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
     log.info("finalmap2 size =" + finalMap2.count())
     log.info("finalmap1 size =" + finalMap.count())
-    val profileLoader = getProfileLoader(outputPath)
     val p1IDFilterOption = finalMap2.map(x => KeyValue(dataSet1Id, x._1)).toLocalIterator.toList
-    val finalProfiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId,
+    val finalProfiles1 = getProfileLoader(dataSet1.path).load(dataSet1.path, realIDField = dataSet1.dataSetId,
       startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1, fieldsToKeep = moreAttr1s.toList,
       fieldValuesScope = p1IDFilterOption,
       filter = SpecificFieldValueFilter
     )
     val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
     val p2IDFilterOption = finalMap2.map(x => KeyValue(dataSet2Id, x._2)).toLocalIterator.toList
-    val finalProfiles2 = profileLoader.load(dataSet2.path, realIDField = dataSet2.dataSetId,
+    val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.dataSetId,
       startIDFrom = 0, sourceId = 0, keepRealID = keepReadID2, fieldsToKeep = moreAttr2s.toList,
       fieldValuesScope = p2IDFilterOption,
       filter = SpecificFieldValueFilter
@@ -321,7 +320,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
   }
 
 
-  private def weightedMatches(spark: SparkSession, attributesMatches: Array[RDD[(Int, Int, Double)]], weights: List[Double]): RDD[(Int, Int, Double)] = {
+  private def weightedMatches(attributesMatches: Array[RDD[(Int, Int, Double)]], weights: List[Double]): RDD[(Int, Int, Double)] = {
     var matches = attributesMatches(0)
     matches = matches.map(x => (x._1, x._2, x._3 * weights(0)))
     for (i <- 1 until attributesMatches.length) {
