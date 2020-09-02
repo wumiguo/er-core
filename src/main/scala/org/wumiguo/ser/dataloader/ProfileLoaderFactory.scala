@@ -13,7 +13,7 @@ object ProfileLoaderFactory {
     sourceType match {
       case CSV => CSVProfileLoader
       case JSON => JSONProfileLoader
-      case PARQUET => CSVProfileLoader
+      case PARQUET => ParquetProfileLoader
     }
   }
 

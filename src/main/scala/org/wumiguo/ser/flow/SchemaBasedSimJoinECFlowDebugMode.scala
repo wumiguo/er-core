@@ -1,15 +1,12 @@
 package org.wumiguo.ser.flow
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
-import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
-import org.wumiguo.ser.datawriter.GenericDataWriter
+import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
 import org.wumiguo.ser.entity.parameter.DataSetConfig
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
@@ -18,16 +15,14 @@ import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.reflect.io.File
 
 /**
  * @author johnli
  *         Created on 2020/6/18
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -66,19 +61,31 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val weightValues = checkAndResolveWeights(joinFieldsWeight, dataSet1)
     preCheckOnWeight(weightValues)
 
+    def profileLoader: ProfileLoaderTrait = getProfileLoader(dataSet1.path)
+
+    log.debug("resolve profile loader " + profileLoader)
+
     def includeRealID(c: DataSetConfig): Boolean = c.dataSetId != null && !c.dataSetId.trim.isEmpty && c.attributes.contains(c.dataSetId)
 
     val keepReadID1 = includeRealID(dataSet1)
     log.info("keepReadID1=" + keepReadID1)
 
-    val profiles1: RDD[Profile] = loadDataWithOption(args, "dataSet1", dataSet1, keepReadID1, 0, 0)
+    val p1FilterOptions = FilterOptions.getOptions("dataSet1", args)
+    log.info("p1FilterOptions=" + p1FilterOptions)
+    val profiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId,
+      startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1,
+      fieldsToKeep = dataSet1.attributes.toList,
+      fieldValuesScope = p1FilterOptions,
+      filter = SpecificFieldValueFilter
+    )
     val keepReadID2 = includeRealID(dataSet2)
     log.info("keepReadID2=" + keepReadID2)
-    val numberOfProfile1 = profiles1.count()
-    val secondEPStartID = numberOfProfile1.intValue()
-    log.info("profiles1 count=" + numberOfProfile1)
+    val secondEPStartID = profiles1.count().intValue()
+    log.info("profiles1 count=" + profiles1.count())
 
-    val profiles2: RDD[Profile] = loadDataWithOption(args, "dataSet2", dataSet2, keepReadID2, secondEPStartID, 1)
+    val profiles2: RDD[Profile] = loadDataWithOption(args, dataSet2,
+      profileLoader _,
+      keepReadID2, secondEPStartID)
     log.info("profiles2 count=" + profiles2.count())
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
@@ -88,10 +95,35 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
 
     assert(dataSet2.path == null || dataSet1.attributes.length == dataSet2.attributes.length,
       "If dataSet 2 exist, the number of attribute use to compare between dataSet 1 and dataSet 2 should be equal")
-    val t1 = Calendar.getInstance().getTimeInMillis
+
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
-    var (attributesMatches: ArrayBuffer[RDD[(Int, Int, Double)]],
-    attributeses: ArrayBuffer[RDD[(Int, String)]]) = doJoin(flowOptions, attributePairsArray)
+    val q = flowOptions.get("q").getOrElse("2")
+    val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
+    val threshold = flowOptions.get("threshold").getOrElse("2")
+    val t1 = Calendar.getInstance().getTimeInMillis
+    var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
+    var attributeses = ArrayBuffer[RDD[(Int, String)]]()
+    attributePairsArray.foreach(attributesTuple => {
+      val attributes1 = attributesTuple._1
+      val attributes2 = attributesTuple._2
+      log.info("attributes1 first = " + attributes1.first() + " 2 " + attributes2.first())
+
+      val attributesMatch: RDD[(Int, Int, Double)] =
+        algorithm match {
+          case ALGORITHM_EDJOIN =>
+            val attributes = attributes1.union(attributes2)
+            attributeses += attributes
+            attributes.cache()
+            EDJoin.getMatches(attributes, q.toInt, threshold.toInt)
+          case ALGORITHM_PARTENUM =>
+            val attributes = attributes1.union(attributes2)
+            attributeses += attributes
+            attributes.cache()
+            PartEnum.getMatches(attributes, threshold.toDouble)
+        }
+      attributesMatches += attributesMatch
+    })
+
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
@@ -165,7 +197,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
     log.info("finalmap2 size =" + finalMap2.count())
     log.info("finalmap1 size =" + finalMap.count())
-    val profileLoader = getProfileLoader(outputPath)
     val p1IDFilterOption = finalMap2.map(x => KeyValue(dataSet1Id, x._1)).toLocalIterator.toList
     val finalProfiles1 = profileLoader.load(dataSet1.path, realIDField = dataSet1.dataSetId,
       startIDFrom = 0, sourceId = 0, keepRealID = keepReadID1, fieldsToKeep = moreAttr1s.toList,
@@ -203,35 +234,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
-  }
-
-  private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]) = {
-    val q = flowOptions.get("q").getOrElse("2")
-    val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
-    val threshold = flowOptions.get("threshold").getOrElse("2")
-    var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
-    var attributeses = ArrayBuffer[RDD[(Int, String)]]()
-    attributePairsArray.foreach(attributesTuple => {
-      val attributes1 = attributesTuple._1
-      val attributes2 = attributesTuple._2
-      log.info("attributes1 first = " + attributes1.first() + " 2 " + attributes2.first())
-
-      val attributesMatch: RDD[(Int, Int, Double)] =
-        algorithm match {
-          case ALGORITHM_EDJOIN =>
-            val attributes = attributes1.union(attributes2)
-            attributeses += attributes
-            attributes.cache()
-            EDJoin.getMatches(attributes, q.toInt, threshold.toInt)
-          case ALGORITHM_PARTENUM =>
-            val attributes = attributes1.union(attributes2)
-            attributeses += attributes
-            attributes.cache()
-            PartEnum.getMatches(attributes, threshold.toDouble)
-        }
-      attributesMatches += attributesMatch
-    })
-    (attributesMatches, attributeses)
   }
 
   private def checkAndResolveWeights(joinFieldsWeight: String, dataSet1: DataSetConfig) = {
@@ -287,21 +289,17 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     columnNames
   }
 
-  private def loadDataWithOption(args: Array[String], dataSetPrefix: String, dataSetConfig: DataSetConfig,
-                                 keepRealID: Boolean, epStartID: Int, sourceId: Int): RDD[Profile] = {
-    val options = FilterOptions.getOptions(dataSetPrefix, args)
-    log.info(dataSetPrefix + "-FilterOptions=" + options)
-    val path = dataSetConfig.path
-    val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
-    log.info("profileLoader is " + loader)
-    val data = loader.load(
-      path, realIDField = dataSetConfig.dataSetId,
-      startIDFrom = epStartID,
-      sourceId = sourceId, keepRealID = keepRealID,
-      fieldsToKeep = dataSetConfig.attributes.toList,
-      fieldValuesScope = options,
+  private def loadDataWithOption(args: Array[String], dataSet2: DataSetConfig, profileLoader: () => ProfileLoaderTrait, keepReadID2: Boolean, secondEPStartID: Int) = {
+    val p2FilterOptions = FilterOptions.getOptions("dataSet2", args)
+    log.info("p2FilterOptions=" + p2FilterOptions)
+    val profiles2 = profileLoader().load(
+      dataSet2.path, realIDField = dataSet2.dataSetId,
+      startIDFrom = secondEPStartID,
+      sourceId = 1, keepRealID = keepReadID2,
+      fieldsToKeep = dataSet2.attributes.toList,
+      fieldValuesScope = p2FilterOptions,
       filter = SpecificFieldValueFilter)
-    data
+    profiles2
   }
 
   private def preCheckOnWeight(weights: List[Double]) = {
@@ -359,10 +357,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       attributesArray :+= ((attributes1, attributes2))
     }
     log.info("attributesArray count=" + attributesArray.length)
-    if (attributesArray.length > 0) {
-      log.info("attributesArray _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
-      log.info("attributesArray _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
-    }
+    log.info("attributesArray _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
+    log.info("attributesArray _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
     attributesArray
   }
 

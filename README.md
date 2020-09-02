@@ -46,3 +46,7 @@ sbt clean package
 sbt clean test
 
 Or using maven is also support :-P
+
+## Run it on cluster
+
+runJob.sh

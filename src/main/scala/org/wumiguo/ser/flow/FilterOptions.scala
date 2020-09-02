@@ -18,7 +18,12 @@ object FilterOptions {
     for (i <- (0 to size - 1)) {
       val optionStr = args.filter(_.startsWith(dataSetPrefix + "-filter" + i + "=")).head
       val kv = optionStr.split("=")(1).split(":")
-      kvList += KeyValue(kv(0), kv(1))
+      if (kv(1).contains(",")) {
+        val values = kv(1).split(",")
+        kvList ++= values.map(KeyValue(kv(0), _))
+      } else {
+        kvList += KeyValue(kv(0), kv(1))
+      }
     }
     kvList.toList
   }

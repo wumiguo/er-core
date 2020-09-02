@@ -4,11 +4,9 @@ import java.util.Calendar
 
 import org.apache.log4j.{FileAppender, Level, LogManager, SimpleLayout}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.entity.parameter.DataSetConfig
-import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.{createLocalSparkSession, getClass}
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
@@ -16,7 +14,6 @@ import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 
 import scala.collection.mutable.ArrayBuffer
-import scala.reflect.io.File
 
 /**
  * @author johnli
@@ -29,12 +26,6 @@ object SchemaBasedSimJoinECFlowSample extends ERFlow with SparkEnvSetup {
   private val ALGORITHM_PARTENUM = "PartEnum"
 
   override def run(args: Array[String]): Unit = {
-    val outputDir: File = File("/tmp/data-er")
-    if (!outputDir.exists) {
-      outputDir.createDirectory(true)
-    }
-    val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
-
     val dataset1Path = CommandLineUtil.getParameter(args, "dataset1", "datasets/clean/DblpAcm/dataset1.json")
     val dataset1Format = CommandLineUtil.getParameter(args, "dataset1-format", "json")
     val dataset1Id = CommandLineUtil.getParameter(args, "dataset1-id", "realProfileID")
@@ -156,7 +147,6 @@ object SchemaBasedSimJoinECFlowSample extends ERFlow with SparkEnvSetup {
 
   def mapMatchesWithProfiles(matchedPairs: RDD[(Int, Int)], profiles: RDD[Profile]): RDD[(Profile, Profile)] = {
     val profilesById = profiles.keyBy(_.id)
-
     matchedPairs.keyBy(_._1).
       join(profilesById).
       map(t => (t._2._1._2, t._2._2)).keyBy(_._1).

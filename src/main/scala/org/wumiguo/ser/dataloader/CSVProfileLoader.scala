@@ -13,6 +13,18 @@ import org.wumiguo.ser.methods.datastructure.{KeyValue, MatchingEntities, Profil
  */
 object CSVProfileLoader extends ProfileLoaderTrait {
 
+
+  override def load(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int,
+                    fieldsToKeep: List[String], keepRealID: Boolean = false,
+                    filter: FieldFilter = DummyFieldFilter,
+                    fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
+    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField,
+      sourceId = sourceId, header = true,
+      fieldsToKeep = fieldsToKeep, keepRealID = keepRealID,
+      filter = filter, fieldValuesScope = fieldValuesScope
+    )
+  }
+
   /**
    * Load the profiles from a CSV file.
    **/
@@ -36,17 +48,18 @@ object CSVProfileLoader extends ProfileLoaderTrait {
    * @param keepRealID
    * @return
    */
-  def loadProfilesAdvanceMode(filePath: String, startIDFrom: Int = 0, separator: String = ",", header: Boolean = false,
-                              explodeInnerFields: Boolean = false, innerSeparator: String = ",", realIDField: String = "", sourceId: Int = 0,
-                              fieldsToKeep: List[String] = Nil, keepRealID: Boolean = false, filter: FieldFilter = DummyFieldFilter,
-                              fieldValuesScope: List[KeyValue] = Nil
+  def loadProfilesAdvanceMode(filePath: String, startIDFrom: Int = 0, separator: String = ",",
+                              header: Boolean = false, explodeInnerFields: Boolean = false, innerSeparator: String = ",",
+                              realIDField: String = "", sourceId: Int = 0, fieldsToKeep: List[String] = Nil,
+                              keepRealID: Boolean = false, filter: FieldFilter = DummyFieldFilter, fieldValuesScope: List[KeyValue] = Nil
                              ): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
     val df = sparkSession.read.option("header", header).option("sep", separator).option("delimiter", "\"").csv(filePath)
     val columnNames = df.columns
     val lcRealIDField = realIDField.toLowerCase
     df.rdd.map(row => rowToAttributes(columnNames, row, explodeInnerFields, innerSeparator))
-      .filter(kvList => filter.filter(kvList.toList, fieldValuesScope)).zipWithIndex().map {
+      .filter(kvList => filter.filter(kvList.toList, fieldValuesScope))
+      .zipWithIndex().map {
       profile =>
         val profileID = profile._2.toInt + startIDFrom
         val attributes = profile._1
@@ -58,38 +71,15 @@ object CSVProfileLoader extends ProfileLoaderTrait {
             attributes.filter(_.key.toLowerCase() == lcRealIDField).map(_.value).mkString("").trim
           }
         }
-        datastructure.Profile(profileID,
+        Profile(profileID,
           attributes.filter(kv => {
             val lcKey = kv.key.toLowerCase
             (keepRealID && lcKey == lcRealIDField) ||
-              ((lcKey != lcRealIDField) && (fieldsToKeep.isEmpty || fieldsToKeep.contains(kv.key))
-                )
+              ((lcKey != lcRealIDField) &&
+                //if not specify fields to keep then get all field, else get the specific fields
+                (fieldsToKeep.isEmpty || fieldsToKeep.contains(kv.key)))
           }),
           realID, sourceId)
     }
-  }
-
-  def loadGroundTruth(filePath: String): RDD[MatchingEntities] = {
-    loadGroundTruth(filePath, ",", false)
-  }
-
-  def loadGroundTruth(filePath: String, separator: String = ",", header: Boolean = false): RDD[MatchingEntities] = {
-    val sparkSession = SparkSession.builder().getOrCreate()
-    val df = sparkSession.read.option("header", header).option("sep", separator).csv(filePath)
-    df.rdd map {
-      row =>
-        MatchingEntities(row.get(0).toString, row.get(1).toString)
-    }
-  }
-
-  override def load(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int,
-                    fieldsToKeep: List[String], keepRealID: Boolean = false,
-                    filter: FieldFilter = DummyFieldFilter,
-                    fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
-    loadProfilesAdvanceMode(filePath, startIDFrom, realIDField = realIDField,
-      sourceId = sourceId, header = true,
-      fieldsToKeep = fieldsToKeep, keepRealID = keepRealID,
-      filter = filter, fieldValuesScope = fieldValuesScope
-    )
   }
 }

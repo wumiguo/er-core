@@ -10,44 +10,26 @@ import scala.collection.mutable
 
 /**
  * @author levinliu
- *         Created on 2020/6/19
+ *         Created on 2020/8/27
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class CSVProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
+class ParquetProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(this.getClass.getName)
 
-  it should "load 10 entity profiles" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.10.csv")
-    val startIdFrom = 100
-    val realIDField = ""
-    val ep1Rdd = CSVProfileLoader.loadProfiles(ep1Path, startIdFrom, realIDField)
-    assert(10 == ep1Rdd.count())
-    assertResult(Profile(100, mutable.MutableList(
-      KeyValue("_c0", "0"),
-      KeyValue("_c1", "The WASA2 object-oriented workflow management system"),
-      KeyValue("_c2", "International Conference on Management of Data"),
-      KeyValue("_c3", "Gottfried Vossen, Mathias Weske")), "", 0)
-    )(ep1Rdd.first())
-  }
-
-
   it should "load only" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.10.csv")
-    val startIdFrom = 100
-    val realIDField = ""
-    val ep1Rdd = CSVProfileLoader.load(ep1Path, startIdFrom, realIDField)
-    assertResult(9)(ep1Rdd.count())
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/dt01.parquet")
+    val ep1Rdd = ParquetProfileLoader.load(ep1Path)
+    assertResult(12)(ep1Rdd.count())
   }
 
-  it should "load 15 entity profiles with header" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
-    val startIdFrom = 1
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true)
-    println("ep1Rdd " + ep1Rdd.count())
-    ep1Rdd.foreach(x => println("epx " + x))
+  it should "load 15 entity profiles" in {
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/acmProfiles.h.15_v2.parquet")
+    val startIdFrom = 100
+    val realIDField = ""
+    val ep1Rdd = ParquetProfileLoader.load(ep1Path, startIdFrom, realIDField)
     assert(15 == ep1Rdd.count())
-    assertResult(Profile(1, mutable.MutableList(
-      KeyValue("year", "0"),
+    assertResult(Profile(100, mutable.MutableList(
+      KeyValue("year", "2010"),
       KeyValue("title", "The WASA2 object-oriented workflow management system"),
       KeyValue("venue", "International Conference on Management of Data"),
       KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "", 0)
@@ -55,39 +37,24 @@ class CSVProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
   it should "load 15 entity profiles with specific fields to keep" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/acmProfiles.h.15_v2.parquet")
     val startIdFrom = 1
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",",
-      fieldsToKeep = List("year", "title"),
-      header = true)
+    val ep1Rdd = ParquetProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom,
+      fieldsToKeep = List("year", "title"))
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
     assert(15 == ep1Rdd.count())
     assertResult(Profile(1, mutable.MutableList(
-      KeyValue("year", "0"),
+      KeyValue("year", "2010"),
       KeyValue("title", "The WASA2 object-oriented workflow management system")))
     )(ep1Rdd.first())
   }
 
-  it should "load 15 entity profiles with header and id column" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.csv")
-    val startIdFrom = 1
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year")
-    println("ep1Rdd " + ep1Rdd.count())
-    ep1Rdd.foreach(x => println("epx " + x))
-    assert(15 == ep1Rdd.count())
-    assertResult(Profile(1, mutable.MutableList(
-      KeyValue("title", "The WASA2 object-oriented workflow management system"),
-      KeyValue("venue", "International Conference on Management of Data"),
-      KeyValue("authors", "Gottfried Vossen, Mathias Weske")), "0", 0)
-    )(ep1Rdd.first())
-  }
-
   it should "load with filter type1" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/acmProfiles.h.15_v2.parquet")
     val startIdFrom = 1
     val fieldValuesScope = List(KeyValue("year", "2010"), KeyValue("year", "2018"))
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+    val ep1Rdd = ParquetProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, realIDField = "year",
       fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
@@ -100,10 +67,10 @@ class CSVProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
   it should "load with filter type2" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/acmProfiles.h.15_v2.parquet")
     val startIdFrom = 1
     val fieldValuesScope = List(KeyValue("year", "2010"), KeyValue("authors", "Gottfried Vossen, Mathias Weske"))
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+    val ep1Rdd = ParquetProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, realIDField = "year",
       fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
@@ -116,11 +83,11 @@ class CSVProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
   it should "load with filter type3" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/acmProfiles.h.15_v2.parquet")
     val startIdFrom = 1
     val fieldValuesScope = List(KeyValue("year", "2010"), KeyValue("year", "2018"),
       KeyValue("authors", "Gottfried Vossen, Mathias Weske"), KeyValue("authors", "Bart Meltzer, Robert Glushko"))
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+    val ep1Rdd = ParquetProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, realIDField = "year",
       fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
@@ -133,10 +100,10 @@ class CSVProfileLoaderTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
   it should "load with filter type4" in {
-    val ep1Path = TestDirs.resolveTestResourcePath("data/csv/acmProfiles.h.15.v2.csv")
+    val ep1Path = TestDirs.resolveTestResourcePath("data/parquet/acmProfiles.h.15_v2.parquet")
     val startIdFrom = 1
     val fieldValuesScope = List()
-    val ep1Rdd = CSVProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, separator = ",", header = true, realIDField = "year",
+    val ep1Rdd = ParquetProfileLoader.loadProfilesAdvanceMode(ep1Path, startIdFrom, realIDField = "year",
       fieldValuesScope = fieldValuesScope, filter = SpecificFieldValueFilter)
     println("ep1Rdd " + ep1Rdd.count())
     ep1Rdd.foreach(x => println("epx " + x))
