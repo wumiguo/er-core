@@ -34,6 +34,7 @@ object CallERFlowLauncher {
     flowArgs +:= "outputType=" + "csv"
     flowArgs +:= "joinResultFile=" + "aa"
     flowArgs +:= "overwriteOnExist=" + "true"
+    flowArgs +:= "showSimilarity=" + "false"
     ERFlowLauncher.main(flowArgs)
   }
 }
