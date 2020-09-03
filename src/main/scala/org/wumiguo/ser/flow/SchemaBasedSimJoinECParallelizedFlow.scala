@@ -1,34 +1,30 @@
 package org.wumiguo.ser.flow
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
-import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
-import org.wumiguo.ser.datawriter.GenericDataWriter
+import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
 import org.wumiguo.ser.entity.parameter.DataSetConfig
+import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
+import org.wumiguo.ser.methods.util.CommandLineUtil
 import org.wumiguo.ser.methods.util.PrintContext.printSparkContext
-import org.wumiguo.ser.methods.util.{CommandLineUtil, PrintContext}
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.reflect.io.File
 
 /**
  * @author johnli
- *         Created on 2020/6/18
+ *         Created on 2020/9/2
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECParallelizedFlow extends ERFlow with SparkEnvSetup {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -90,11 +86,20 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
-    val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues)
+    val (attributesMatches: ArrayBuffer[RDD[(Int, Int, Double)]],
+    attributeses: ArrayBuffer[RDD[(Int, String)]]) = doJoin(flowOptions, attributePairsArray)
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
-    log.info("[SSJoin] match attribute pairs " + attributePairsArray.length)
+    log.info("[SSJoin] match attribute pairs " + attributesMatches.length)
+
+    val matchDetails: RDD[(Int, Int, Double)] = if (!weighted) {
+      log.info("run with weightedMatches")
+      weightedMatches(attributesMatches.toArray, weightValues)
+    } else {
+      log.info("run with intersectionMatches")
+      intersectionMatches(attributesMatches.toArray)
+    }
     val nm = matchDetails.count()
     log.info("[SSJoin] Number of matches " + nm)
     val t3 = Calendar.getInstance().getTimeInMillis
@@ -102,6 +107,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       Option(at._1).map(_.unpersist())
       Option(at._2).map(_.unpersist())
     })
+    attributeses.foreach(_.unpersist())
     log.info("[SSJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
     if (nm > 0) {
       log.info("[SSJoin] First matches " + matchDetails.first())
@@ -154,7 +160,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     log.info("showSimilarity=" + showSimilarity)
     val spark = SparkSession.builder().getOrCreate()
     if (showSimilarity) {
-      val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
+      val matchedPairsWithSimilarity = enrichWithSimilarity(matchedPairs, matchDetails, secondEPStartID)
       log.info("matchedPairsWithSimilarityCount=" + matchedPairsWithSimilarity.count())
       val profileMatches2 = mapMatchesWithProfilesAndSimilarity(matchedPairsWithSimilarity, profiles, secondEPStartID)
       log.info("profileMatchesCount=" + profileMatches2.count())
@@ -255,34 +261,34 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     }
   }
 
-  private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
-                     weighted: Boolean, weights: List[Double]) = {
+  private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]) = {
     val q = flowOptions.get("q").getOrElse("2")
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
-
-    def getMatches(pair: (RDD[(Int, String)], RDD[(Int, String)])): RDD[(Int, Int, Double)] = {
-      algorithm match {
-        case ALGORITHM_EDJOIN =>
-          val attributes = pair._1.union(pair._2)
-          EDJoin.getMatches(attributes, q.toInt, threshold.toInt)
-        case ALGORITHM_PARTENUM =>
-          val attributes = pair._1.union(pair._2)
-          PartEnum.getMatches(attributes, threshold.toDouble)
+    var attributesMatches = new ArrayBuffer[RDD[(Int, Int, Double)]]()
+    var attributeses = ArrayBuffer[RDD[(Int, String)]]()
+    attributePairsArray.foreach(at2 => {
+      val attributes1 = at2._1
+      val attributes2 = at2._2
+      if (!attributes1.isEmpty()) {
+        log.info("attributes1-first = " + attributes1.first() + " attributes2-first " + attributes2.first())
       }
-    }
-
-    val attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributePairsArray(0))
-    for (i <- 1 until attributePairsArray.length) {
-      val next = attributePairsArray(i)
-      if (weighted) {
-        val nextMatches = attributesMatches.union(getMatches(next))
-        nextMatches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
-      } else {
-        attributesMatches.intersection(getMatches(next))
-      }
-    }
-    attributesMatches
+      val attributesMatch: RDD[(Int, Int, Double)] =
+        algorithm match {
+          case ALGORITHM_EDJOIN =>
+            val attributes = attributes1.union(attributes2)
+            attributeses += attributes
+            attributes.cache()
+            EDJoin.getMatches(attributes, q.toInt, threshold.toInt)
+          case ALGORITHM_PARTENUM =>
+            val attributes = attributes1.union(attributes2)
+            attributeses += attributes
+            attributes.cache()
+            PartEnum.getMatches(attributes, threshold.toDouble)
+        }
+      attributesMatches += attributesMatch
+    })
+    (attributesMatches, attributeses)
   }
 
   private def checkAndResolveWeights(joinFieldsWeight: String, dataSet1: DataSetConfig) = {
@@ -300,10 +306,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     if (dataSet1.attributes.size != dataSet2.attributes.size) {
       throw new RuntimeException("Cannot join if the attribute pair size not same on two data set")
     }
-  }
-
-  private def enrichPairs(matchPairs: RDD[(Int, Int)]): RDD[(Int, Int, Double)] = {
-    matchPairs.map(x => (x._1, x._2, 1.0))
   }
 
   private def enrichWithSimilarity(matchPairs: RDD[(Int, Int)], matchDetails: RDD[(Int, Int, Double)], secondEPStartID: Int): RDD[(Int, Int, Double)] = {

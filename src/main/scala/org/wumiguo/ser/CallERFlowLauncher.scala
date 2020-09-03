@@ -32,9 +32,9 @@ object CallERFlowLauncher {
     flowArgs +:= "option2=algorithm:EDJoin"
     flowArgs +:= "outputPath=" + "/Users/mac/Development/learn/er-spark/output/trade-product"
     flowArgs +:= "outputType=" + "csv"
-    flowArgs +:= "joinResultFile=" + "aa"
+    flowArgs +:= "joinResultFile=" + "aa2"
     flowArgs +:= "overwriteOnExist=" + "true"
-    flowArgs +:= "showSimilarity=" + "false"
+    flowArgs +:= "showSimilarity=" + "true"
     ERFlowLauncher.main(flowArgs)
   }
 }

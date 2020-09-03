@@ -222,4 +222,48 @@ object EDJoin {
     log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
     m
   }
+
+
+
+//  def getMatchesV2(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
+//    val log = LogManager.getRootLogger
+//    log.info("[EDJoin] first document " + documents.first())
+//
+//    val t1 = Calendar.getInstance().getTimeInMillis
+//    val candidates = getCandidates(documents, qgramLength, threshold)
+//
+//    val t2 = Calendar.getInstance().getTimeInMillis
+//
+//    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
+//      .filter(_._3 <= threshold)
+//      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
+//    m.persist(StorageLevel.MEMORY_AND_DISK)
+//    val nm = m.count()
+//    val t3 = Calendar.getInstance().getTimeInMillis
+//    log.info("[EDJoin] Num matches " + nm)
+//    log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
+//    log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
+//    m
+//  }
+
+  def getMatchesWithRate(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
+    val log = LogManager.getRootLogger
+    log.info("[EDJoin] first document " + documents.first())
+
+    val t1 = Calendar.getInstance().getTimeInMillis
+    val candidates = getCandidates(documents, qgramLength, threshold)
+
+    val t2 = Calendar.getInstance().getTimeInMillis
+
+    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)/(d1.length+d2.length)) }
+      .filter(_._3 <= threshold)
+      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
+    m.persist(StorageLevel.MEMORY_AND_DISK)
+    val nm = m.count()
+    val t3 = Calendar.getInstance().getTimeInMillis
+    log.info("[EDJoin] Num matches " + nm)
+    log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
+    log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
+    m
+  }
 }
