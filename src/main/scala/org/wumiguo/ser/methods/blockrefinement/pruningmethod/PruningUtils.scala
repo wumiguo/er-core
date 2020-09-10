@@ -103,8 +103,8 @@ object PruningUtils {
                   profiliCheContiene foreach { //Per ognuno dei suoi vicini in questo blocco
                     secondProfileID =>
                       val vicino = secondProfileID.toInt //ID del vicino
-                      val pesoAttuale = arrayPesi(vicino) //Leggo il peso attuale che ha questo vicino
-                      if (pesoAttuale == 0) { //Se è 0 vuol dire che non l'avevo mai trovato prima
+                      val pesoAttuale = arrayPesi(vicino)
+                      if (pesoAttuale == 0) {
                         arrayVicini.update(numeroVicini, vicino) //Aggiungo all'elenco dei vicini questo nuovo vicino
                         arrayPesi.update(vicino, 1) //Aggiorno il suo peso ad 1
                         numeroVicini = numeroVicini + 1 //Incremento il numero di vicini
@@ -116,20 +116,18 @@ object PruningUtils {
 
             var cont = 0 //Contatore che legge quanti vicini mantengo
 
-            var edges: List[UnweightedEdge] = Nil //Edge che verrà dato in uscita per questo profilo che corrisponde ad un match nel dataset 2 (solo se lo trova), va bene solo se clean sto metodo!
-
+            var edges: List[UnweightedEdge] = Nil
             for (i <- 0 to numeroVicini - 1) { //Scorro i vicini che ho trovato
-              if (profileID < arrayVicini(i)) { //Aumento il contatore solo se id profiloattuale < id vicino, così li conta una volta sola
+              if (profileID < arrayVicini(i)) {
                 cont += 1
               }
-              if (groundtruth.value.contains((profileID, arrayVicini(i)))) { //Il groundtruth è organizzato come (ID dataset1, ID dataset2), quindi devo cercare il profilo con ID minore
+              if (groundtruth.value.contains((profileID, arrayVicini(i)))) {
                 edges = UnweightedEdge(profileID, arrayVicini(i)) :: edges //Genero l'edge che voglio tenere
               }
               else if (groundtruth.value.contains((arrayVicini(i), profileID))) {
                 edges = UnweightedEdge(arrayVicini(i), profileID) :: edges
               }
-
-              arrayPesi.update(arrayVicini(i), 0) //Il peso di questo vicino non mi serve più, lo resetto per il prossimo giro
+              arrayPesi.update(arrayVicini(i), 0)
             }
 
             numeroVicini = 0 //Resetto numero di vicini

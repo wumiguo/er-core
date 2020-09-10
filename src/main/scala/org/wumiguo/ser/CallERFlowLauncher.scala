@@ -8,7 +8,7 @@ package org.wumiguo.ser
 object CallERFlowLauncher {
   def main(args: Array[String]): Unit = {
     var flowArgs = Array[String]()
-//    flowArgs +:= "flowType=SSJoin"
+    //    flowArgs +:= "flowType=SSJoin"
     flowArgs +:= "flowType=SSParaJoin"
     flowArgs +:= "dataSet1=" + "src/main/resources/sampledata/dt01.csv"
     flowArgs +:= "dataSet1-id=" + "t_id"
@@ -31,7 +31,7 @@ object CallERFlowLauncher {
     flowArgs +:= "option0=q:2"
     flowArgs +:= "option1=threshold:1" //0,1,2
     flowArgs +:= "option2=algorithm:EDJoin"
-    flowArgs +:= "outputPath=" + "/Users/mac/Development/learn/er-spark/output/trade-product"
+    flowArgs +:= "outputPath=" + "output/trade-product"
     flowArgs +:= "outputType=" + "csv"
     flowArgs +:= "joinResultFile=" + "aa2"
     flowArgs +:= "overwriteOnExist=" + "true"

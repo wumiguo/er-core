@@ -113,12 +113,6 @@ object LSH {
         }
     }
 
-    /**
-      * Inverte la coppia (attributo, token).
-      * Raggruppa per token ottenendo (token, [elenco attributi])
-      * Dà un id univoco ad ogni token
-      * Restituisce (id univoco, [elenco attributi])
-      **/
     val tokenAttribute_to_tokenID = attributesToken.map(_.swap).groupByKey().zipWithIndex()
     val attributesPerToken: RDD[(Int, Iterable[Attr])] = tokenAttribute_to_tokenID.map { case ((token, attribueNameList), tokenID) => (tokenID.toInt, attribueNameList) }
 

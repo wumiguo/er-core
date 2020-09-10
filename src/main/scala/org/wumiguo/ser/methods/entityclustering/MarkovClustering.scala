@@ -9,10 +9,10 @@ import org.wumiguo.ser.methods.entityclustering.EntityClusterUtils.{addUncluster
 import scala.util.control.Breaks.{break, breakable}
 
 /**
-  * Il problema è che ogni volta crea la matrice 16k x 16k
-  * bisogna far si che la matrice creata abbia dimensione del connected component
-  * in un qualche modo però bisogna avere a che fare con il separator id, è questo il problema.
-  **/
+ * The problem is that each time it creates the 16k x 16k matrix
+ * * it is necessary to ensure that the created matrix has the dimension of the connected component
+ * * somehow, however, you have to deal with the separator id, that's the problem.
+ */
 object MarkovClustering extends EntityClusteringTrait {
 
   override def getClusters(profiles: RDD[Profile], edges: RDD[WeightedEdge], maxProfileID: Int, edgesThreshold: Double, separatorID: Int): RDD[(Int, Set[Int])] = {

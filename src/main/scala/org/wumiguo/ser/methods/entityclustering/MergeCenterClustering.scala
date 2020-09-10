@@ -67,11 +67,6 @@ object MergeCenterClustering extends EntityClusteringTrait {
           val vIsNonCenter = isNonCenter(v.toInt)
 
 
-          //println("U è un centro: "+uIsCenter)
-          //println("V è un centro: "+vIsCenter)
-          //println("U non è un centro: "+uIsNonCenter)
-          //println("V non è un centro: "+vIsNonCenter)
-
 
           if (!(uIsCenter || vIsCenter || uIsNonCenter || vIsNonCenter)) {
             //println("Imposto u come nuovo centro, creo il cluster "+u)
@@ -85,7 +80,6 @@ object MergeCenterClustering extends EntityClusteringTrait {
           else if ((uIsCenter && vIsCenter) || (uIsNonCenter && vIsNonCenter)) {}
           else if (uIsCenter) {
             val currentUassignedCluster = currentAssignedCenter(u.toInt)
-            //println("U è un centro, attualmente è contenuto nel cluster "+currentUassignedCluster)
             //println("Aggiungo v a quel cluster")
             clusters.put(currentUassignedCluster, clusters(currentUassignedCluster) + v)
             mergeClusters(currentUassignedCluster, currentAssignedCenter(v.toInt))
@@ -94,7 +88,6 @@ object MergeCenterClustering extends EntityClusteringTrait {
           }
           else if (vIsCenter) {
             val currentVassignedCluster = currentAssignedCenter(v.toInt)
-            //println("V è un centro, attualmente è contenuto nel cluster "+currentVassignedCluster)
             //println("Aggiungo v a quel cluster")
             clusters.put(currentVassignedCluster, clusters(currentVassignedCluster) + u)
 

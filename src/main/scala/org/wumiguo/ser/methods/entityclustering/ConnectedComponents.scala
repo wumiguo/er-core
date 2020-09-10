@@ -233,7 +233,7 @@ object ConnectedComponents extends Serializable {
       val (nodePairsLargeStar, currLargeStarConnectivityChangeCount) = largeStar(nodePairs)
 
       val (nodePairsSmallStar, currSmallStarConnectivityChangeCount) = smallStar(nodePairsLargeStar)
-      //log.info("cc::nodePairsSmallStar " + nodePairsSmallStar.toLocalIterator.toList + " nodePairsLargeStar" + nodePairsLargeStar.toLocalIterator.toList + " currLargeStarConnectivityChangeCount " + currLargeStarConnectivityChangeCount + "，currSmallStarConnectivityChangeCount " + currSmallStarConnectivityChangeCount)
+      //log.info("cc::nodePairsSmallStar " + nodePairsSmallStar.toLocalIterator.toList + " nodePairsLargeStar" + nodePairsLargeStar.toLocalIterator.toList + " currLargeStarConnectivityChangeCount " + currLargeStarConnectivityChangeCount + ", currSmallStarConnectivityChangeCount " + currSmallStarConnectivityChangeCount)
       if ((currLargeStarConnectivityChangeCount == largeStarConnectivityChangeCount &&
         currSmallStarConnectivityChangeCount == smallStarConnectivityChangeCount) ||
         (currSmallStarConnectivityChangeCount == 0 && currLargeStarConnectivityChangeCount == 0)) {

@@ -146,12 +146,15 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup {
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
   }
+
   private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
                      weighted: Boolean, weights: List[Double]) = {
     val q = flowOptions.get("q").getOrElse("2")
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
     val joinPoolSize = flowOptions.get("joinPoolSize").getOrElse("4").toInt
+    val joinMaxDuration = flowOptions.get("joinMaxDuration").getOrElse("10").toInt
+    val joinMaxDurationUnit = flowOptions.get("joinMaxDurationUnit").getOrElse("minute")
 
     def getMatches(pair: (RDD[(Int, String)], RDD[(Int, String)])): RDD[(Int, Int, Double)] = {
       algorithm match {
@@ -172,14 +175,16 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup {
       for (i <- 0 until attributePairsArray.length) {
         val next = attributePairsArray(i)
 
-        def doMatch(i: (RDD[(Int, String)], RDD[(Int, String)]))(implicit xc: ExecutionContext) = Future {
-          log.info("para run " + xc.toString)
-          getMatches(i)
+        def doMatch(x: (RDD[(Int, String)], RDD[(Int, String)]))(implicit xc: ExecutionContext) = Future {
+          log.info("para run " + i)
+          getMatches(x)
         }
 
         tasks :+= doMatch(next)
       }
-      val res = Await.result(Future.sequence(tasks), Duration(5, MINUTES))
+      val duration = Duration.create(joinMaxDuration, joinMaxDurationUnit)
+      log.info("duration=" + duration)
+      val res = Await.result(Future.sequence(tasks), duration)
       var matches = res(0)
       for (i <- 1 until res.length) {
         if (weighted) {
