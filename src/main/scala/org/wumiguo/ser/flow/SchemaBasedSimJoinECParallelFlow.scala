@@ -55,7 +55,6 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup {
     val overwriteOnExist = CommandLineUtil.getParameter(args, "overwriteOnExist", "false")
     val showSimilarity = CommandLineUtil.getParameter(args, "showSimilarity", "false")
     val joinFieldsWeight = CommandLineUtil.getParameter(args, "joinFieldsWeight", "")
-    val joinPoolSize = CommandLineUtil.getParameter(args, "joinPoolSize", "4")
 
     val dataSet1 = new DataSetConfig(dataSet1Path, dataSet1Format, dataSet1Id,
       Option(attributes1).map(_.split(",")).orNull)
@@ -92,7 +91,7 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup {
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
-    val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues, joinPoolSize.toInt)
+    val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues)
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
@@ -148,10 +147,11 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup {
     log.info("[SSJoin] Completed")
   }
   private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
-                     weighted: Boolean, weights: List[Double], joinPoolSize: Int) = {
+                     weighted: Boolean, weights: List[Double]) = {
     val q = flowOptions.get("q").getOrElse("2")
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
+    val joinPoolSize = flowOptions.get("joinPoolSize").getOrElse("4").toInt
 
     def getMatches(pair: (RDD[(Int, String)], RDD[(Int, String)])): RDD[(Int, Int, Double)] = {
       algorithm match {
