@@ -1,12 +1,12 @@
 package org.wumiguo.ser.methods.similarityjoins
 
 import org.apache.spark.rdd.RDD
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.methods.similarityjoins.common.ed.CommonEdFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.EDJoin
 
-class EDJoinTest extends FlatSpec with SparkEnvSetup {
+class EDJoinTest extends AnyFlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(getClass.getName)
 
   it should "getPositionalQGrams with q=2" in {
@@ -56,6 +56,34 @@ class EDJoinTest extends FlatSpec with SparkEnvSetup {
       Array("abcd", "habcd")
     )(prefixIndex(0)._2.map(_._4))
   }
+
+  it should "getMatches simple" in {
+    val docs = spark.sparkContext.parallelize(
+      Seq(
+        (1, "this"),
+        (2, "mthis")
+      ))
+    val results = EDJoin.getMatches(docs, 3, 0).collect
+    assertResult(Array())(results.sortBy(_._1))
+  }
+
+
+  it should "getMatches exactly aka edit distance=0" in {
+    val docs = spark.sparkContext.parallelize(
+      Seq(
+        (1, "this string with 1 insert change"),
+        (2, "mthis string with 1 insert change"),
+        (3, "this string with 1 substitution change"),
+        (4, "mhis string with 1 substitution change"),
+        (5, "this string with 1 delete change"),
+        (6, "his string with 1 delete change"),
+        (7, "first"),
+        (8, "second")
+      ))
+    val results = EDJoin.getMatches(docs, 3, 0).collect
+    assertResult(Array())(results.sortBy(_._1))
+  }
+
 
   it should "getMatches should match string within edit distance is 1" in {
     val docs = spark.sparkContext.parallelize(

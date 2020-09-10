@@ -2,7 +2,7 @@ package org.wumiguo.ser.methods.entityclustering
 
 import org.scalatest.FlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.methods.datastructure.WeightedEdge
+import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 
 /**
  * @author levinliu
@@ -19,5 +19,22 @@ class EntityClusterUtilsTest extends FlatSpec with SparkEnvSetup {
     ))
     val connected = EntityClusterUtils.connectedComponents(weRdd)
     connected.foreach(x => println("connectedComp=" + x))
+  }
+
+  it should "addUnclusteredProfiles " in {
+    val pRdd = spark.sparkContext.parallelize(Seq(
+      Profile(1),
+      Profile(2),
+      Profile(3),
+      Profile(4),
+      Profile(5)
+    ))
+    val clusterRdd = spark.sparkContext.parallelize(Seq(
+      (0, Set(1, 2, 3))
+    ))
+    val connected = EntityClusterUtils.addUnclusteredProfiles(pRdd, clusterRdd)
+    assertResult(
+      List((4, Set(4)), (5, Set(5)), (0, Set(1, 2, 3)))
+    )(connected.sortBy(_._2.size).collect.toList)
   }
 }

@@ -18,11 +18,11 @@ import org.wumiguo.ser.methods.util.CommandLineUtil
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * @author johnli
- *         Created on 2020/6/18
+ * @author levinliu
+ *         Created on 2020/8/28
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -236,23 +236,6 @@ object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup {
     log.info("[SSJoin] Completed")
   }
 
-  private def checkAndResolveWeights(joinFieldsWeight: String, dataSet1: DataSetConfig) = {
-    val weights = joinFieldsWeight.split(',').toList
-    if (weights.size != dataSet1.attributes.size) {
-      throw new RuntimeException("Cannot resolve same weight size as the given attributes size ")
-    }
-    weights.map(_.toDouble)
-  }
-
-  private def preCheckOnAttributePair(dataSet1: DataSetConfig, dataSet2: DataSetConfig) = {
-    if (dataSet1.attributes.size == 0 || dataSet2.attributes.size == 0) {
-      throw new RuntimeException("Cannot join data set with no attributed")
-    }
-    if (dataSet1.attributes.size != dataSet2.attributes.size) {
-      throw new RuntimeException("Cannot join if the attribute pair size not same on two data set")
-    }
-  }
-
   private def enrichWithSimilarity(matchPairs: RDD[(Int, Int)], matchDetails: RDD[(Int, Int, Double)], secondEPStartID: Int): RDD[(Int, Int, Double)] = {
     val mp = matchPairs.map(x => {
       if (x._1 < secondEPStartID) {
@@ -302,13 +285,6 @@ object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup {
     profiles2
   }
 
-  private def preCheckOnWeight(weights: List[Double]) = {
-    val sum = weights.reduce(_ + _)
-    if (sum != 1.0) {
-      throw new RuntimeException("Cannot continue with weights summary > 1.0, sum=" + sum + " given weights=" + weights)
-    }
-  }
-
   private def intersectionMatches(attributesMatches: Array[RDD[(Int, Int, Double)]]): RDD[(Int, Int, Double)] = {
     var matches = attributesMatches(0);
     for (i <- 1 until attributesMatches.length) {
@@ -339,27 +315,6 @@ object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup {
     log.info("-sparkContext appName=" + spark.sparkContext.appName)
     log.info("-sparkContext applicationId=" + spark.sparkContext.applicationId)
     log.info("-sparkContext getConf=" + spark.sparkContext.getConf)
-  }
-
-  private def preCheckOnProfile(profiles: RDD[Profile]) = {
-    if (profiles.isEmpty()) {
-      throw new RuntimeException("Empty profile data set")
-    }
-  }
-
-  def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfig, dataSet2: DataSetConfig): ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
-    var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
-    log.info("dataSet1Attr=" + dataSet1.attributes.toList)
-    log.info("dataSet2Attr=" + dataSet2.attributes.toList)
-    for (i <- 0 until dataSet1.attributes.length) {
-      val attributes1 = CommonFunctions.extractField(profiles1, dataSet1.attributes(i))
-      val attributes2 = Option(dataSet2.attributes).map(attributes => CommonFunctions.extractField(profiles2, attributes(i))).orNull
-      attributesArray :+= ((attributes1, attributes2))
-    }
-    log.info("attributesArray count=" + attributesArray.length)
-    log.info("attributesArray _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
-    log.info("attributesArray _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
-    attributesArray
   }
 
 
@@ -396,11 +351,6 @@ object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup {
         (id2, id1, similarity)
       }
     })
-  }
-
-
-  def getProfileLoader(dataFile: String): ProfileLoaderTrait = {
-    ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(dataFile))
   }
 
 }

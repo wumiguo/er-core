@@ -15,8 +15,13 @@ object CommonEdFunctions {
   }
 
   /**
-   * Dati due elementi ne calcola l'edit distance
-   **/
+   * Calculate edit distance
+   *
+   * @param a
+   * @param b
+   * @tparam A
+   * @return
+   */
   def editDist[A](a: Iterable[A], b: Iterable[A]): Int = {
     ((0 to b.size).toList /: a) ((prev, x) =>
       (prev zip prev.tail zip b).scanLeft(prev.head + 1) {
@@ -25,9 +30,12 @@ object CommonEdFunctions {
   }
 
   /**
-   * Data una stringa ne restituisce i qgrammi.
-   * Il qgramma ha anche la posizione originale nel documento
-   **/
+   * split string into queue of gram
+   *
+   * @param str
+   * @param qgramSize
+   * @return
+   */
   def getQgrams(str: String, qgramSize: Int): Array[(String, Int)] = {
     str.sliding(qgramSize).zipWithIndex.map(q => (q._1, q._2)).toArray
   }
@@ -51,7 +59,7 @@ object CommonEdFunctions {
   }
 
   /**
-   * Ordina i qgrammi all'interno del documento per la loro document frequency
+   * Sort the q-grams within the document by their document frequency
    **/
   def getSortedQgrams(docs: RDD[(Int, Array[(String, Int)])]): RDD[(Int, Array[(Int, Int)])] = {
     val tf = getQgramsTf(docs)
@@ -80,9 +88,9 @@ object CommonEdFunctions {
   }
 
   /**
-   * Dato l'elenco di documenti con i q-grammi ordinati crea il prefix index.
-   * Nota: per risolvere il problema dei documenti troppo corti il prefix index contiene un blocco identificato dall'id
-   * specificato in "fixprefix" che contiene tutti i documenti che non possono essere verificati con sicurezza.
+   * Given the list of documents with the ordered q-grams, create the prefix index.
+   * Note: to solve the problem of documents that are too short, the prefix index contains a block identified by the id
+   * specified in "fixprefix" which contains all documents that cannot be verified with certainty.
    **/
   def buildPrefixIndex(sortedDocs: RDD[(Int, Array[(Int, Int)])], qgramLen: Int, threshold: Int): RDD[(Int, Array[Qgram])] = {
     val prefixLen = EdFilters.getPrefixLen(qgramLen, threshold)

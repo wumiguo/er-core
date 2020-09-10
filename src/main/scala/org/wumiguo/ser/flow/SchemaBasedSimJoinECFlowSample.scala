@@ -20,7 +20,7 @@ import scala.collection.mutable.ArrayBuffer
  *         Created on 2020/6/18
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlowSample extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECFlowSample extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -153,9 +153,5 @@ object SchemaBasedSimJoinECFlowSample extends ERFlow with SparkEnvSetup {
       join(profilesById).map(t => (t._2._1._2, t._2._2))
   }
 
-
-  def getProfileLoader(dataFile: String): ProfileLoaderTrait = {
-    ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(dataFile))
-  }
 
 }

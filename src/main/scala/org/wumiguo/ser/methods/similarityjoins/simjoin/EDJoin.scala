@@ -9,23 +9,23 @@ import org.wumiguo.ser.methods.datastructure.EDJoinPrefixIndexPartitioner
 import org.wumiguo.ser.methods.similarityjoins.common.ed.{CommonEdFunctions, EdFilters}
 
 /**
-  * @author levinliu
-  *         Created on 2020/6/11
-  *         (Change file header on Settings -> Editor -> File and Code Templates)
-  *
-  *         PRELIMINARIES
-  *         1.
-  *         A q-gram is a contiguous substring of length q; and its starting position in a string is called its position or location.
-  *         A positional q-gram is a q-gram together with its position, usually represented in the form of (token,pos)
-  *
-  * 2.Count Filtering mandates that s and t must share at least LBs;t = (max(|s|,|t|) − q + 1) − q · τ common q-grams.
-  *
-  * 3.Length Filtering mandates that ||s| − |t|| ≤ τ.
-  */
+ * @author levinliu
+ *         Created on 2020/6/11
+ *         (Change file header on Settings -> Editor -> File and Code Templates)
+ *
+ *         PRELIMINARIES
+ *         1.
+ *         A q-gram is a contiguous substring of length q; and its starting position in a string is called its position or location.
+ *         A positional q-gram is a q-gram together with its position, usually represented in the form of (token,pos)
+ *
+ * 2.Count Filtering mandates that s and t must share at least LBs;t = (max(|s|,|t|) − q + 1) − q · τ common q-grams.
+ *
+ * 3.Length Filtering mandates that ||s| − |t|| ≤ τ.
+ */
 object EDJoin {
   /**
-    * since the blocks all has at least one token common in the prefix, the prefix filtering is completed in here while doing the groupByKey
-    */
+   * since the blocks all has at least one token common in the prefix, the prefix filtering is completed in here while doing the groupByKey
+   */
   def buildPrefixIndex(sortedDocs: RDD[(Int, String, Array[(Int, Int)])], qgramLen: Int, threshold: Int): RDD[(Int, Array[(Int, Int, Array[(Int, Int)], String)])] = {
     val prefixLen = EdFilters.getPrefixLen(qgramLen, threshold)
 
@@ -44,13 +44,13 @@ object EDJoin {
   }
 
   /**
-    * Returns true if the token of the current block is the last common token
-    *
-    * @param doc1Tokens   tokens of the first document
-    * @param doc2Tokens   tokens of the second document
-    * @param currentToken id of the current block in which the documents co-occurs
-    *
-    */
+   * Returns true if the token of the current block is the last common token
+   *
+   * @param doc1Tokens   tokens of the first document
+   * @param doc2Tokens   tokens of the second document
+   * @param currentToken id of the current block in which the documents co-occurs
+   *
+   */
   def isLastCommonTokenPosition(doc1Tokens: Array[(Int, Int)], doc2Tokens: Array[(Int, Int)], currentToken: Int, qgramLen: Int, threshold: Int): Boolean = {
     val prefixLen = EdFilters.getPrefixLen(qgramLen, threshold)
     var d1Index = math.min(doc1Tokens.length - 1, prefixLen - 1)
@@ -59,32 +59,32 @@ object EDJoin {
     var continue = true
 
     /**
-      * Starting from the prefix looking for the last common token
-      * One exists for sure
-      **/
+     * Starting from the prefix looking for the last common token
+     * One exists for sure
+     **/
     while (d1Index >= 0 && d2Index >= 0 && continue) {
       /**
-        * Common token
-        **/
+       * Common token
+       **/
       if (doc1Tokens(d1Index)._1 == doc2Tokens(d2Index)._1) {
         /**
-          * If the token is the same of the current block, stop the process
-          **/
+         * If the token is the same of the current block, stop the process
+         **/
         if (currentToken == doc1Tokens(d1Index)._1) {
           continue = false
         }
         else {
           /**
-            * If it is different, it is not considered valid: needed to avoid to emit duplicates
-            **/
+           * If it is different, it is not considered valid: needed to avoid to emit duplicates
+           **/
           continue = false
           valid = false
         }
       }
 
       /**
-        * Decrement the indexes (note: the tokens are sorted)
-        **/
+       * Decrement the indexes (note: the tokens are sorted)
+       **/
       else if (doc1Tokens(d1Index)._1 > doc2Tokens(d2Index)._1) {
         d1Index -= 1
       }
@@ -98,8 +98,8 @@ object EDJoin {
 
   def getCandidatePairs(prefixIndex: RDD[(Int, Array[(Int, Int, Array[(Int, Int)], String)])], qgramLength: Int, threshold: Int): RDD[((Int, String), (Int, String))] = {
     /**
-      * Repartitions the blocks of the index based on the number of maximum comparisons involved by each block
-      */
+     * Repartitions the blocks of the index based on the number of maximum comparisons involved by each block
+     */
     val customPartitioner = new EDJoinPrefixIndexPartitioner(prefixIndex.getNumPartitions)
     val repartitionIndex = prefixIndex.map(_.swap).sortBy(x => -(x._1.length * (x._1.length - 1))).partitionBy(customPartitioner)
 
@@ -161,8 +161,8 @@ object EDJoin {
 
     //Sorts the n-grams by their document frequency
     /** From the paper
-      * We can extract all the positional q-grams of a string and order them by decreasing order of their idf values and increasing order of their locations.
-      */
+     * We can extract all the positional q-grams of a string and order them by decreasing order of their idf values and increasing order of their locations.
+     */
     //output [(docId,string,[(token index,token position of q-gram),...]),...]
     //q-gram is order by rare decreasing, the rarest one in the head of the array
     val sortedDocs = CommonEdFunctions.getSortedQgrams2(docs)
@@ -177,18 +177,19 @@ object EDJoin {
     val te = Calendar.getInstance().getTimeInMillis
     log.info("[EDJoin] Number of elements in the index " + np)
 
-    //only use to do the statistics, not a part of the algorithm
-    val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
-    val min = a.min()
-    val max = a.max()
-    val cnum = a.sum()
-    val avg = cnum / np
+    if (!prefixIndex.isEmpty()) {
+      //only use to do the statistics, not a part of the algorithm
+      val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
+      val min = a.min()
+      val max = a.max()
+      val cnum = a.sum()
+      val avg = cnum / np
 
-    log.info("[EDJoin] Min number of comparisons " + min)
-    log.info("[EDJoin] Max number of comparisons " + max)
-    log.info("[EDJoin] Avg number of comparisons " + avg)
-    log.info("[EDJoin] Estimated comparisons " + cnum)
-
+      log.info("[EDJoin] Min number of comparisons " + min)
+      log.info("[EDJoin] Max number of comparisons " + max)
+      log.info("[EDJoin] Avg number of comparisons " + avg)
+      log.info("[EDJoin] Estimated comparisons " + cnum)
+    }
     log.info("[EDJoin] EDJOIN index time (s) " + (te - ts) / 1000.0)
 
     val t1 = Calendar.getInstance().getTimeInMillis
@@ -224,27 +225,26 @@ object EDJoin {
   }
 
 
-
-//  def getMatchesV2(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
-//    val log = LogManager.getRootLogger
-//    log.info("[EDJoin] first document " + documents.first())
-//
-//    val t1 = Calendar.getInstance().getTimeInMillis
-//    val candidates = getCandidates(documents, qgramLength, threshold)
-//
-//    val t2 = Calendar.getInstance().getTimeInMillis
-//
-//    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
-//      .filter(_._3 <= threshold)
-//      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
-//    m.persist(StorageLevel.MEMORY_AND_DISK)
-//    val nm = m.count()
-//    val t3 = Calendar.getInstance().getTimeInMillis
-//    log.info("[EDJoin] Num matches " + nm)
-//    log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
-//    log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
-//    m
-//  }
+  //  def getMatchesV2(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
+  //    val log = LogManager.getRootLogger
+  //    log.info("[EDJoin] first document " + documents.first())
+  //
+  //    val t1 = Calendar.getInstance().getTimeInMillis
+  //    val candidates = getCandidates(documents, qgramLength, threshold)
+  //
+  //    val t2 = Calendar.getInstance().getTimeInMillis
+  //
+  //    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
+  //      .filter(_._3 <= threshold)
+  //      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
+  //    m.persist(StorageLevel.MEMORY_AND_DISK)
+  //    val nm = m.count()
+  //    val t3 = Calendar.getInstance().getTimeInMillis
+  //    log.info("[EDJoin] Num matches " + nm)
+  //    log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
+  //    log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
+  //    m
+  //  }
 
   def getMatchesWithRate(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
     val log = LogManager.getRootLogger
@@ -255,7 +255,7 @@ object EDJoin {
 
     val t2 = Calendar.getInstance().getTimeInMillis
 
-    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)/(d1.length+d2.length)) }
+    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2) / (d1.length + d2.length)) }
       .filter(_._3 <= threshold)
       .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)

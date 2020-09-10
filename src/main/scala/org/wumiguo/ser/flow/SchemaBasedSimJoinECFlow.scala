@@ -1,35 +1,27 @@
 package org.wumiguo.ser.flow
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{Row, SaveMode, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
-import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
-import org.wumiguo.ser.datawriter.GenericDataWriter
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
 import org.wumiguo.ser.entity.parameter.DataSetConfig
 import org.wumiguo.ser.flow.render.ERResultRender
-import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
+import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
-import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
+import org.wumiguo.ser.methods.util.CommandLineUtil
 import org.wumiguo.ser.methods.util.PrintContext.printSparkContext
-import org.wumiguo.ser.methods.util.{CommandLineUtil, PrintContext}
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.reflect.io.File
 
 /**
  * @author johnli
  *         Created on 2020/6/18
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -87,10 +79,10 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     log.info("profiles1 first=" + profiles1.first())
     log.info("profiles2 first=" + profiles2.first())
     preCheckOnAttributePair(dataSet1, dataSet2)
-    val t1 = Calendar.getInstance().getTimeInMillis
-    val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
+    val t1 = Calendar.getInstance().getTimeInMillis
+    val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
     val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues)
     val t2 = Calendar.getInstance().getTimeInMillis
 
@@ -147,11 +139,15 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     log.info("[SSJoin] Completed")
   }
 
-  private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
-                     weighted: Boolean, weights: List[Double]) = {
+  def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
+             weighted: Boolean, weights: List[Double]) = {
+    if (weighted && weights.size != attributePairsArray.size) {
+      throw new RuntimeException("Mismatch weights size " + weights.size + " vs attributePairArray size " + attributePairsArray.size)
+    }
     val q = flowOptions.get("q").getOrElse("2")
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
+    val scale = flowOptions.get("scale").getOrElse("3").toInt
 
     def getMatches(pair: (RDD[(Int, String)], RDD[(Int, String)])): RDD[(Int, Int, Double)] = {
       algorithm match {
@@ -165,57 +161,21 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     }
 
     var attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributePairsArray(0))
+    if (weighted) {
+      attributesMatches = attributesMatches.map(x => (x._1, x._2, weights(0) / (x._3 + 1)))
+    }
     for (i <- 1 until attributePairsArray.length) {
       val next = attributePairsArray(i)
       if (weighted) {
-        val nextMatches = attributesMatches.union(getMatches(next))
-        attributesMatches = nextMatches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
+        val nextMatches = getMatches(next).map(x => (x._1, x._2, weights(i) / (x._3 + 1)))
+        attributesMatches = attributesMatches.union(nextMatches).groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) =>
+          (y._1, y._2, (BigDecimal(y._3.toString) + BigDecimal(z._3.toString)).setScale(scale, BigDecimal.RoundingMode.HALF_UP).doubleValue())
+        ))
       } else {
         attributesMatches = attributesMatches.intersection(getMatches(next))
       }
     }
     attributesMatches
-  }
-
-  private def checkAndResolveWeights(joinFieldsWeight: String, dataSet1: DataSetConfig) = {
-    val weights = joinFieldsWeight.split(',').toList
-    if (weights.size != dataSet1.attributes.size) {
-      throw new RuntimeException("Cannot resolve same weight size as the given attributes size ")
-    }
-    weights.map(_.toDouble)
-  }
-
-  private def preCheckOnAttributePair(dataSet1: DataSetConfig, dataSet2: DataSetConfig) = {
-    if (dataSet1.attributes.size == 0 || dataSet2.attributes.size == 0) {
-      throw new RuntimeException("Cannot join data set with no attributed")
-    }
-    if (dataSet1.attributes.size != dataSet2.attributes.size) {
-      throw new RuntimeException("Cannot join if the attribute pair size not same on two data set")
-    }
-  }
-
-  private def loadDataWithOption(args: Array[String], dataSetPrefix: String, dataSetConfig: DataSetConfig,
-                                 keepRealID: Boolean, epStartID: Int, sourceId: Int): RDD[Profile] = {
-    val options = FilterOptions.getOptions(dataSetPrefix, args)
-    log.info(dataSetPrefix + "-FilterOptions=" + options)
-    val path = dataSetConfig.path
-    val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
-    log.info("profileLoader is " + loader)
-    val data = loader.load(
-      path, realIDField = dataSetConfig.dataSetId,
-      startIDFrom = epStartID,
-      sourceId = sourceId, keepRealID = keepRealID,
-      fieldsToKeep = dataSetConfig.attributes.toList,
-      fieldValuesScope = options,
-      filter = SpecificFieldValueFilter)
-    data
-  }
-
-  private def preCheckOnWeight(weights: List[Double]) = {
-    val sum = weights.reduce(_ + _)
-    if (sum != 1.0) {
-      throw new RuntimeException("Cannot continue with weights summary > 1.0, sum=" + sum + " given weights=" + weights)
-    }
   }
 
   private def intersectionMatches(attributesMatches: Array[RDD[(Int, Int, Double)]]): RDD[(Int, Int, Double)] = {
@@ -226,7 +186,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     if (attributesMatches.length > 1) matches.cache()
     matches
   }
-
 
   private def weightedMatches(attributesMatches: Array[RDD[(Int, Int, Double)]], weights: List[Double]): RDD[(Int, Int, Double)] = {
     var matches = attributesMatches(0)
@@ -239,33 +198,6 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     if (attributesMatches.length > 1) matches.cache()
     val data = matches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
     data
-  }
-
-  private def preCheckOnProfile(profiles: RDD[Profile]) = {
-    if (profiles.isEmpty()) {
-      throw new RuntimeException("Empty profile data set")
-    }
-  }
-
-  def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfig, dataSet2: DataSetConfig): ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
-    var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
-    log.info("dataSet1Attr=" + dataSet1.attributes.toList + " vs dataSet2Attr=" + dataSet2.attributes.toList)
-    for (i <- 0 until dataSet1.attributes.length) {
-      val attributes1 = CommonFunctions.extractField(profiles1, dataSet1.attributes(i))
-      val attributes2 = Option(dataSet2.attributes).map(x => CommonFunctions.extractField(profiles2, x(i))).orNull
-      attributesArray :+= ((attributes1, attributes2))
-    }
-    log.info("attrsArrayLength=" + attributesArray.length)
-    if (attributesArray.length > 0) {
-      log.info("attrsArrayHead _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
-      log.info("attrsArrayHead _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
-    }
-    attributesArray
-  }
-
-
-  def getProfileLoader(dataFile: String): ProfileLoaderTrait = {
-    ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(dataFile))
   }
 
 }

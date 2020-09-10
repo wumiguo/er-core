@@ -60,6 +60,28 @@ class CommonEdFunctionsTest extends FlatSpec with SparkEnvSetup {
     ))
     val sortedQg = CommonEdFunctions.getSortedQgrams2(docsRdd)
     sortedQg.foreach(x => println("sorted=" + x._1 + "," + x._2 + "," + x._3.toList))
+  }
 
+  it should "get editDist" in {
+    var dist = CommonEdFunctions.editDist(Seq("abc", "cde"), Seq("abc", "cde"))
+    assertResult(0)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde"), Seq("abc", "cdd"))
+    assertResult(1)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde"), Seq("cde", "abc"))
+    assertResult(2)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde"), Seq("bcc", "cdf"))
+    assertResult(2)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde"), Seq("buc", "cdf"))
+    assertResult(2)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde", "efg"), Seq("buc", "cdf"))
+    assertResult(3)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde", "buc"), Seq("buc"))
+    assertResult(2)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abc", "cde", "buc"), Seq("buc", "cdf"))
+    assertResult(3)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abcd", "cde", "buc"), Seq("buc", "cdf"))
+    assertResult(3)(dist)
+    dist = CommonEdFunctions.editDist(Seq("abcd", "cde", "buc"), Seq("buc", "cdf", "gge"))
+    assertResult(3)(dist)
   }
 }
