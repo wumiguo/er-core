@@ -9,6 +9,7 @@ object CallERFlowLauncher {
   def main(args: Array[String]): Unit = {
     var flowArgs = Array[String]()
     flowArgs +:= "flowType=SSJoin"
+    flowArgs +:= "flowType=SSJoinV2"
     flowArgs +:= "dataSet1=" + "src/main/resources/sampledata/dt01.csv"
     flowArgs +:= "dataSet1-id=" + "t_id"
     flowArgs +:= "dataSet1-format=" + "csv"

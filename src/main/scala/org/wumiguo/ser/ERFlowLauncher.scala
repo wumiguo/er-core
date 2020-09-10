@@ -1,7 +1,7 @@
 package org.wumiguo.ser
 
 import org.slf4j.LoggerFactory
-import org.wumiguo.ser.flow.{ERFlow, End2EndSimpleFlow, End2EndSimpleFlowSample, SchemaBasedSimJoinECFlow, SchemaBasedSimJoinECFlowSample}
+import org.wumiguo.ser.flow.{ERFlow, End2EndSimpleFlow, End2EndSimpleFlowSample, SchemaBasedSimJoinECFlow, SchemaBasedSimJoinECFlowSample, SchemaBasedSimJoinECFlowV2}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 
 /**
@@ -20,6 +20,7 @@ object ERFlowLauncher {
       case "End2EndSample" => End2EndSimpleFlowSample
       case "SSJoinSample" => SchemaBasedSimJoinECFlowSample
       case "SSJoin" => SchemaBasedSimJoinECFlow
+      case "SSJoinV2" => SchemaBasedSimJoinECFlowV2
       case _ => throw new RuntimeException("Unsupported flow type " + flowType)
     }
     flow.run(args)

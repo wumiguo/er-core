@@ -1,35 +1,35 @@
 package org.wumiguo.ser.flow
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.{Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
-import org.wumiguo.ser.dataloader.{DataType, DataTypeResolver, JSONWrapper, ProfileLoaderFactory, ProfileLoaderTrait}
-import org.wumiguo.ser.datawriter.GenericDataWriter
+import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
 import org.wumiguo.ser.entity.parameter.DataSetConfig
-import org.wumiguo.ser.flow.render.ERResultRender
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDJoin, PartEnum}
+import org.wumiguo.ser.methods.util.CommandLineUtil
 import org.wumiguo.ser.methods.util.PrintContext.printSparkContext
-import org.wumiguo.ser.methods.util.{CommandLineUtil, PrintContext}
 
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.reflect.io.File
+import java.util.concurrent.Executors
+
+import org.wumiguo.ser.flow.render.ERResultRender
+
+import scala.concurrent._
+import scala.concurrent.duration._
 
 /**
  * @author johnli
  *         Created on 2020/6/18
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
+object SchemaBasedSimJoinECFlowV2 extends ERFlow with SparkEnvSetup {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -55,6 +55,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val overwriteOnExist = CommandLineUtil.getParameter(args, "overwriteOnExist", "false")
     val showSimilarity = CommandLineUtil.getParameter(args, "showSimilarity", "false")
     val joinFieldsWeight = CommandLineUtil.getParameter(args, "joinFieldsWeight", "")
+    val joinPoolSize = CommandLineUtil.getParameter(args, "joinPoolSize", "4")
 
     val dataSet1 = new DataSetConfig(dataSet1Path, dataSet1Format, dataSet1Id,
       Option(attributes1).map(_.split(",")).orNull)
@@ -91,7 +92,7 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
-    val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues)
+    val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues, joinPoolSize.toInt)
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
@@ -146,9 +147,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
   }
-
   private def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
-                     weighted: Boolean, weights: List[Double]) = {
+                     weighted: Boolean, weights: List[Double], joinPoolSize: Int) = {
     val q = flowOptions.get("q").getOrElse("2")
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
@@ -164,17 +164,35 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup {
       }
     }
 
-    var attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributePairsArray(0))
-    for (i <- 1 until attributePairsArray.length) {
-      val next = attributePairsArray(i)
-      if (weighted) {
-        val nextMatches = attributesMatches.union(getMatches(next))
-        attributesMatches = nextMatches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
-      } else {
-        attributesMatches = attributesMatches.intersection(getMatches(next))
+    val pool = Executors.newFixedThreadPool(joinPoolSize)
+    try {
+      implicit val xc = ExecutionContext.fromExecutorService(pool)
+
+      var tasks = Seq[Future[RDD[(Int, Int, Double)]]]()
+      for (i <- 0 until attributePairsArray.length) {
+        val next = attributePairsArray(i)
+
+        def doMatch(i: (RDD[(Int, String)], RDD[(Int, String)]))(implicit xc: ExecutionContext) = Future {
+          log.info("para run " + xc.toString)
+          getMatches(i)
+        }
+
+        tasks :+= doMatch(next)
       }
+      val res = Await.result(Future.sequence(tasks), Duration(5, MINUTES))
+      var matches = res(0)
+      for (i <- 1 until res.length) {
+        if (weighted) {
+          val nextMatches = matches.union(res(i))
+          matches = nextMatches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
+        } else {
+          matches.intersection(res(i))
+        }
+      }
+      matches
+    } finally {
+      pool.shutdown()
     }
-    attributesMatches
   }
 
   private def checkAndResolveWeights(joinFieldsWeight: String, dataSet1: DataSetConfig) = {
