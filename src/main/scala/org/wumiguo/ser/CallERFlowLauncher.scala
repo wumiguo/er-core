@@ -8,8 +8,8 @@ package org.wumiguo.ser
 object CallERFlowLauncher {
   def main(args: Array[String]): Unit = {
     var flowArgs = Array[String]()
-    //    flowArgs +:= "flowType=SSJoin"
-    flowArgs +:= "flowType=SSParaJoin"
+        flowArgs +:= "flowType=SSJoin"
+//    flowArgs +:= "flowType=SSParaJoin"
     flowArgs +:= "dataSet1=" + "src/main/resources/sampledata/dt01.csv"
     flowArgs +:= "dataSet1-id=" + "t_id"
     flowArgs +:= "dataSet1-format=" + "csv"
@@ -33,7 +33,7 @@ object CallERFlowLauncher {
     flowArgs +:= "option2=algorithm:EDJoin"
     flowArgs +:= "outputPath=" + "output/trade-product"
     flowArgs +:= "outputType=" + "csv"
-    flowArgs +:= "joinResultFile=" + "aa2"
+    flowArgs +:= "joinResultFile=" + "tp_join"
     flowArgs +:= "overwriteOnExist=" + "true"
     flowArgs +:= "showSimilarity=" + "true"
     ERFlowLauncher.main(flowArgs)

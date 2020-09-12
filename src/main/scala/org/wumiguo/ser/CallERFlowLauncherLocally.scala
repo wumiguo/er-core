@@ -1,8 +1,8 @@
 package org.wumiguo.ser
 
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.flow.FlowOptions
 import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.{createLocalSparkSession, getClass, log}
+import org.wumiguo.ser.flow.configuration.FlowOptions
 
 import scala.reflect.io.File
 

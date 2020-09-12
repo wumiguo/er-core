@@ -3,7 +3,7 @@ package org.wumiguo.ser.flow
 import org.apache.spark.rdd.RDD
 import org.scalatest.flatspec.AnyFlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.doJoin
+import org.wumiguo.ser.flow.SchemaBasedBatchSimJoinECFlow.doJoin
 import org.wumiguo.ser.flow.configuration.FlowOptions
 
 import scala.collection.mutable.ArrayBuffer
@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
  *         Created on 2020/8/27
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class SchemaBasedSimJoinECFlowTest extends AnyFlatSpec with SparkEnvSetup {
+class SchemaBasedBatchSimJoinECFlowTest extends AnyFlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(getClass.getName)
   it should "doJoin weighted against 1 attr pair" in {
     val flowOptions = FlowOptions.getOptions(Array("optionSize=3", "option0=algorithm:EDJoin", "option1=threshold:0", "option2=q:2"))

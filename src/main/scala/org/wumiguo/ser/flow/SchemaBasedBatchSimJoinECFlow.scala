@@ -1,7 +1,6 @@
 package org.wumiguo.ser.flow
 
-import java.util.concurrent.Executors
-import java.util.{Calendar, UUID}
+import java.util.Calendar
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
@@ -16,15 +15,13 @@ import org.wumiguo.ser.methods.util.CommandLineUtil
 import org.wumiguo.ser.methods.util.PrintContext.printSparkContext
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent._
-import scala.concurrent.duration._
 
 /**
  * @author levinliu
  *         Created on 2020/9/8
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
+object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -64,16 +61,16 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup with S
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
     val t1 = Calendar.getInstance().getTimeInMillis
-    val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
-    val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues)
+    val attributeArrayPairs = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
+    val matchDetails = doJoin(flowOptions, attributeArrayPairs, weighted, weightValues)
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
-    log.info("[SSJoin] match attribute pairs " + attributePairsArray.length)
+    log.info("[SSJoin] match attribute pairs " + attributeArrayPairs.length)
     val nm = matchDetails.count()
     log.info("[SSJoin] Number of matches " + nm)
     val t3 = Calendar.getInstance().getTimeInMillis
-    attributePairsArray.foreach(at => {
+    attributeArrayPairs.foreach(at => {
       Option(at._1).map(_.unpersist())
       Option(at._2).map(_.unpersist())
     })
@@ -127,9 +124,6 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup with S
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
     val scale = flowOptions.get("scale").getOrElse("3").toInt
-    val joinPoolSize = flowOptions.get("joinPoolSize").getOrElse("4").toInt
-    val joinMaxDuration = flowOptions.get("joinMaxDuration").getOrElse("10").toInt
-    val joinMaxDurationUnit = flowOptions.get("joinMaxDurationUnit").getOrElse("minute")
 
     def getMatches(pair: (RDD[(Int, String)], RDD[(Int, String)])): RDD[(Int, Int, Double)] = {
       algorithm match {
@@ -142,68 +136,21 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup with S
       }
     }
 
-    val pool = Executors.newFixedThreadPool(joinPoolSize)
-    try {
-      implicit val xc = ExecutionContext.fromExecutorService(pool)
-
-      var tasks = Seq[Future[RDD[(Int, Int, Double)]]]()
-      for (i <- 0 until attributePairsArray.length) {
-        val next = attributePairsArray(i)
-
-        def doMatch(x: (RDD[(Int, String)], RDD[(Int, String)]))(implicit xc: ExecutionContext) = Future {
-          val id = i + "-" + UUID.randomUUID().toString
-          log.info("para-task[" + id + "] start")
-          val res = getMatches(x)
-          val finalRes = if (weighted) {
-            res.map(x => (x._1, x._2, weights(i) / (x._3 + 1)))
-          } else {
-            res
-          }
-          log.info("para-task[" + id + "] completed")
-          finalRes
-        }
-
-        tasks :+= doMatch(next)
+    var attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributePairsArray(0))
+    if (weighted) {
+      attributesMatches = attributesMatches.map(x => (x._1, x._2, weights(0) / (x._3 + 1)))
+    }
+    for (i <- 1 until attributePairsArray.length) {
+      val next = attributePairsArray(i)
+      if (weighted) {
+        val nextMatches = getMatches(next).map(x => (x._1, x._2, weights(i) / (x._3 + 1)))
+        attributesMatches = attributesMatches.union(nextMatches).groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) =>
+          (y._1, y._2, (BigDecimal(y._3.toString) + BigDecimal(z._3.toString)).setScale(scale, BigDecimal.RoundingMode.HALF_UP).doubleValue())
+        ))
+      } else {
+        attributesMatches = attributesMatches.intersection(getMatches(next))
       }
-      val duration = Duration.create(joinMaxDuration, joinMaxDurationUnit)
-      log.info("duration=" + duration)
-      val res = Await.result(Future.sequence(tasks), duration)
-      var matches = res(0)
-      for (i <- 1 until res.length) {
-        if (weighted) {
-          matches = matches.union(res(i)).groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) =>
-            (y._1, y._2, (BigDecimal(y._3.toString) + BigDecimal(z._3.toString)).setScale(scale, BigDecimal.RoundingMode.HALF_UP).doubleValue())
-          ))
-        } else {
-          matches.intersection(res(i))
-        }
-      }
-      matches
-    } finally {
-      pool.shutdown()
     }
+    attributesMatches
   }
-
-  private def intersectionMatches(attributesMatches: Array[RDD[(Int, Int, Double)]]): RDD[(Int, Int, Double)] = {
-    var matches = attributesMatches(0);
-    for (i <- 1 until attributesMatches.length) {
-      matches = matches.intersection(attributesMatches(i))
-    }
-    if (attributesMatches.length > 1) matches.cache()
-    matches
-  }
-
-  private def weightedMatches(attributesMatches: Array[RDD[(Int, Int, Double)]], weights: List[Double]): RDD[(Int, Int, Double)] = {
-    var matches = attributesMatches(0)
-    matches = matches.map(x => (x._1, x._2, x._3 * weights(0)))
-    for (i <- 1 until attributesMatches.length) {
-      var next = attributesMatches(i)
-      next = matches.map(x => (x._1, x._2, x._3 * weights(i)))
-      matches = matches.union(next)
-    }
-    if (attributesMatches.length > 1) matches.cache()
-    val data = matches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
-    data
-  }
-
 }

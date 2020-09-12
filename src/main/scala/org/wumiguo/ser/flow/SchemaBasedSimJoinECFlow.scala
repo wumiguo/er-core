@@ -6,7 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
-import org.wumiguo.ser.entity.parameter.DataSetConfig
+import org.wumiguo.ser.flow.configuration.{CommandLineConfigLoader, FlowOptions}
 import org.wumiguo.ser.flow.render.ERResultRender
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
@@ -29,29 +29,15 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCo
   override def run(args: Array[String]): Unit = {
     val spark = SparkSession.builder().getOrCreate()
     printSparkContext()
-    val dataSet1Path = CommandLineUtil.getParameter(args, "dataSet1", "datasets/clean/DblpAcm/dataset1.json")
-    val dataSet1Format = CommandLineUtil.getParameter(args, "dataSet1-format", "json")
-    val dataSet1Id = CommandLineUtil.getParameter(args, "dataSet1-id", "realProfileID")
-    val attributes1 = CommandLineUtil.getParameter(args, "dataSet1-attrSet", "title")
-    val moreAttr1ToExtract = CommandLineUtil.getParameter(args, "dataSet1-additionalAttrSet", "title")
-    val moreAttr1s = moreAttr1ToExtract.split(",")
-    val moreAttr2ToExtract = CommandLineUtil.getParameter(args, "dataSet2-additionalAttrSet", "title")
-    val moreAttr2s = moreAttr2ToExtract.split(",")
-    val dataSet2Path = CommandLineUtil.getParameter(args, "dataSet2", "datasets/clean/DblpAcm/dataset2.json")
-    val dataSet2Format = CommandLineUtil.getParameter(args, "dataSet2-format", "json")
-    val dataSet2Id = CommandLineUtil.getParameter(args, "dataSet2-id", "realProfileID")
-    val attributes2 = CommandLineUtil.getParameter(args, "dataSet2-attrSet", "title")
+    val dataSet1 = CommandLineConfigLoader.load(args, "dataSet1")
+    val dataSet2 = CommandLineConfigLoader.load(args, "dataSet2")
+
     val outputPath = CommandLineUtil.getParameter(args, "outputPath", "output/mapping")
     val outputType = CommandLineUtil.getParameter(args, "outputType", "json")
     val joinResultFile = CommandLineUtil.getParameter(args, "joinResultFile", "mapping")
     val overwriteOnExist = CommandLineUtil.getParameter(args, "overwriteOnExist", "false")
     val showSimilarity = CommandLineUtil.getParameter(args, "showSimilarity", "false")
     val joinFieldsWeight = CommandLineUtil.getParameter(args, "joinFieldsWeight", "")
-
-    val dataSet1 = new DataSetConfig(dataSet1Path, dataSet1Format, dataSet1Id,
-      Option(attributes1).map(_.split(",")).orNull)
-    val dataSet2 = new DataSetConfig(dataSet2Path, dataSet2Format, dataSet2Id,
-      Option(attributes2).map(_.split(",")).orNull)
     log.info("dataSet1=" + dataSet1)
     log.info("dataSet2=" + dataSet2)
     preCheckOnAttributePair(dataSet1, dataSet2)
@@ -59,26 +45,19 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCo
     val weightValues = checkAndResolveWeights(joinFieldsWeight, dataSet1)
     preCheckOnWeight(weightValues)
 
-    def includeRealID(c: DataSetConfig): Boolean = c.dataSetId != null && !c.dataSetId.trim.isEmpty && c.attributes.contains(c.dataSetId)
 
-    val keepReadID1 = includeRealID(dataSet1)
-    log.info("keepReadID1=" + keepReadID1)
-
-    val profiles1: RDD[Profile] = loadDataWithOption(args, "dataSet1", dataSet1, keepReadID1, 0, 0)
-    val keepReadID2 = includeRealID(dataSet2)
-    log.info("keepReadID2=" + keepReadID2)
+    val profiles1: RDD[Profile] = loadDataWithOption(dataSet1, 0, 0)
     val numberOfProfile1 = profiles1.count()
     val secondEPStartID = numberOfProfile1.intValue()
     log.info("profiles1 count=" + numberOfProfile1)
 
-    val profiles2: RDD[Profile] = loadDataWithOption(args, "dataSet2", dataSet2, keepReadID2, secondEPStartID, 1)
+    val profiles2: RDD[Profile] = loadDataWithOption(dataSet2, secondEPStartID, 1)
     log.info("profiles2 count=" + profiles2.count())
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
 
     log.info("profiles1 first=" + profiles1.first())
     log.info("profiles2 first=" + profiles2.first())
-    preCheckOnAttributePair(dataSet1, dataSet2)
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
     val t1 = Calendar.getInstance().getTimeInMillis
@@ -128,11 +107,8 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCo
     }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
-    val (columnNames, rows) = ERResultRender.renderResult(dataSet1Id, moreAttr1s, moreAttr2s,
-      dataSet2Id, dataSet1, dataSet2,
-      keepReadID1, keepReadID2, secondEPStartID,
-      matchDetails, profiles, matchedPairs,
-      showSim)
+    val (columnNames, rows) = ERResultRender.renderResult(dataSet1, dataSet2,
+      secondEPStartID, matchDetails, profiles, matchedPairs, showSim)
     val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
@@ -177,27 +153,4 @@ object SchemaBasedSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCo
     }
     attributesMatches
   }
-
-  private def intersectionMatches(attributesMatches: Array[RDD[(Int, Int, Double)]]): RDD[(Int, Int, Double)] = {
-    var matches = attributesMatches(0);
-    for (i <- 1 until attributesMatches.length) {
-      matches = matches.intersection(attributesMatches(i))
-    }
-    if (attributesMatches.length > 1) matches.cache()
-    matches
-  }
-
-  private def weightedMatches(attributesMatches: Array[RDD[(Int, Int, Double)]], weights: List[Double]): RDD[(Int, Int, Double)] = {
-    var matches = attributesMatches(0)
-    matches = matches.map(x => (x._1, x._2, x._3 * weights(0)))
-    for (i <- 1 until attributesMatches.length) {
-      var next = attributesMatches(i)
-      next = matches.map(x => (x._1, x._2, x._3 * weights(i)))
-      matches = matches.union(next)
-    }
-    if (attributesMatches.length > 1) matches.cache()
-    val data = matches.groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) => (y._1, y._2, y._3 + z._3)))
-    data
-  }
-
 }

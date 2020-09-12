@@ -1,4 +1,4 @@
-package org.wumiguo.ser.flow
+package org.wumiguo.ser.flow.configuration
 
 import org.wumiguo.ser.methods.datastructure.KeyValue
 

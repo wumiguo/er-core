@@ -50,11 +50,12 @@ object ConnectedComponentsClustering extends EntityClusteringTrait {
       (x._1, (y._1, {
         val ids = y._1.toArray
         var pairs = new ArrayBuffer[(Int, Int)]()
-        for (i <- 0 until ids.size-1) {
+        for (i <- 0 until ids.size - 1) {
           for (j <- i + 1 until ids.size) {
             pairs :+= (ids(i), ids(j))
           }
         }
+        //TODO: use graph algo to calculate the path
         pairs.filter(p => p._1 != p._2).map(p => Map(p -> y._2.getOrElse(p, 0.0))).reduce(_ ++ _)
       })
       )

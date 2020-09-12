@@ -9,6 +9,7 @@ import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
 import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
 import org.wumiguo.ser.entity.parameter.DataSetConfig
+import org.wumiguo.ser.flow.configuration.{FilterOptions, FlowOptions}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.common.CommonFunctions

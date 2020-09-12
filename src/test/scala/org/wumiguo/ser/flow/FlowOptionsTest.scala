@@ -1,6 +1,7 @@
 package org.wumiguo.ser.flow
 
 import org.scalatest.FlatSpec
+import org.wumiguo.ser.flow.configuration.FlowOptions
 
 /**
  * @author levinliu
