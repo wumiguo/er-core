@@ -10,7 +10,7 @@ import org.wumiguo.ser.flow.configuration.{CommandLineConfigLoader, FlowOptions}
 import org.wumiguo.ser.flow.render.ERResultRender
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
-import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDBatchJoin, EDBatchSimpleJoin, EDJoin, PartEnum}
+import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDBatchJoin, EDBatchSimpleJoin}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 import org.wumiguo.ser.methods.util.PrintContext.printSparkContext
 
@@ -21,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
  *         Created on 2020/9/8
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
+object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with SimJoinCommonTrait {
 
   private val ALGORITHM_EDJOIN = "EDJoin"
   private val ALGORITHM_PARTENUM = "PartEnum"
@@ -121,12 +121,26 @@ object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJ
       algorithm match {
         case ALGORITHM_EDJOIN =>
           val attributes = pair._1.union(pair._2)
-          EDBatchSimpleJoin.getMatches(attributes, q.toInt, threshold.toInt)
+          EDBatchJoin.getMatches(attributes, q.toInt, threshold.toInt)
         case _ => throw new RuntimeException("Unsupported algo " + algorithm)
       }
     }
 
     var attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributeArrayPair)
+//    if (weighted) {
+//      attributesMatches = attributesMatches.map(x => (x._1, x._2, weights(0) / (x._3 + 1)))
+//    }
+    //    for (i <- 1 until attributeArrayPair.length) {
+    //      val next = attributePairsArray(i)
+    //      if (weighted) {
+    //        val nextMatches = getMatches(next).map(x => (x._1, x._2, weights(i) / (x._3 + 1)))
+    //        attributesMatches = attributesMatches.union(nextMatches).groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) =>
+    //          (y._1, y._2, (BigDecimal(y._3.toString) + BigDecimal(z._3.toString)).setScale(scale, BigDecimal.RoundingMode.HALF_UP).doubleValue())
+    //        ))
+    //      } else {
+    //        attributesMatches = attributesMatches.intersection(getMatches(next))
+    //      }
+    //    }
     attributesMatches
   }
 }

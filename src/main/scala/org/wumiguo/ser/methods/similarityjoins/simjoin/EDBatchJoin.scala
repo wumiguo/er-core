@@ -10,7 +10,7 @@ import org.wumiguo.ser.methods.similarityjoins.common.ed.{CommonEdFunctions, EdF
 
 /**
  * @author levinliu
- *         Created on 2020/6/11
+ *         Created on 2020/9/10
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  *
  *         PRELIMINARIES
@@ -22,12 +22,9 @@ import org.wumiguo.ser.methods.similarityjoins.common.ed.{CommonEdFunctions, EdF
  *
  * 3.Length Filtering mandates that ||s| − |t|| ≤ τ.
  */
-object EDJoin {
+object EDBatchJoin {
   /**
-   * Do prefix-filtering
-   *
-   * since the blocks all has at least one token common in the prefix,
-   * the prefix filtering is completed in here while doing the groupByKey
+   * since the blocks all has at least one token common in the prefix, the prefix filtering is completed in here while doing the groupByKey
    */
   def buildPrefixIndex(sortedDocs: RDD[(Int, String, Array[(Int, Int)])], qgramLen: Int, threshold: Int): RDD[(Int, Array[(Int, Int, Array[(Int, Int)], String)])] = {
     val prefixLen = EdFilters.getPrefixLen(qgramLen, threshold)
@@ -42,6 +39,7 @@ object EDJoin {
 
     //output [(tokenId,[strings share the same token])...],and filter the token only be owned by one string
     val blocks = allQgrams.groupByKey().filter(_._2.size > 1)
+
     blocks.map(b => (b._1, b._2.toArray.sortBy(_._3.length)))
   }
 
@@ -149,11 +147,14 @@ object EDJoin {
     }
   }
 
-  def getPositionalQGrams(documents: RDD[(Int, String)], qgramLength: Int): RDD[(Int, String, Array[(String, Int)])] = {
-    documents.map(x => (x._1, x._2, CommonEdFunctions.getQgrams(x._2, qgramLength)))
+  def getPositionalQGrams(documents: RDD[(Int, Array[String])], qgramLength: Int): RDD[(Int, String, Array[(String, Int)])] = {
+    documents.flatMap(x => {
+      x._2.map(str => (x._1, str, CommonEdFunctions.getQgrams(str, qgramLength)))
+    })
   }
 
-  def getCandidates(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[((Int, String), (Int, String))] = {
+
+  def getCandidates(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[((Int, String), (Int, String))] = {
     //Transforms the documents into n-grams
     //output example
     //(docId,string,positional q-gram)
@@ -180,7 +181,7 @@ object EDJoin {
     log.info("[EDJoin] Number of elements in the index " + np)
 
     if (!prefixIndex.isEmpty()) {
-      //only use to do the statistics, not a part of the algorithm (n*(n-1)
+      //only use to do the statistics, not a part of the algorithm
       val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
       val min = a.min()
       val max = a.max()
@@ -205,7 +206,7 @@ object EDJoin {
     candidates
   }
 
-  def getMatches(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
+  def getMatches(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
     val log = LogManager.getRootLogger
     log.info("[EDJoin] first document " + documents.first())
 
@@ -215,49 +216,6 @@ object EDJoin {
     val t2 = Calendar.getInstance().getTimeInMillis
 
     val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
-      .filter(_._3 <= threshold)
-      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
-    m.persist(StorageLevel.MEMORY_AND_DISK)
-    val nm = m.count()
-    val t3 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Num matches " + nm)
-    log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
-    log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
-    m
-  }
-
-
-  //  def getMatchesV2(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
-  //    val log = LogManager.getRootLogger
-  //    log.info("[EDJoin] first document " + documents.first())
-  //
-  //    val t1 = Calendar.getInstance().getTimeInMillis
-  //    val candidates = getCandidates(documents, qgramLength, threshold)
-  //
-  //    val t2 = Calendar.getInstance().getTimeInMillis
-  //
-  //    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2)) }
-  //      .filter(_._3 <= threshold)
-  //      .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
-  //    m.persist(StorageLevel.MEMORY_AND_DISK)
-  //    val nm = m.count()
-  //    val t3 = Calendar.getInstance().getTimeInMillis
-  //    log.info("[EDJoin] Num matches " + nm)
-  //    log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
-  //    log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
-  //    m
-  //  }
-
-  def getMatchesWithRate(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
-    val log = LogManager.getRootLogger
-    log.info("[EDJoin] first document " + documents.first())
-
-    val t1 = Calendar.getInstance().getTimeInMillis
-    val candidates = getCandidates(documents, qgramLength, threshold)
-
-    val t2 = Calendar.getInstance().getTimeInMillis
-
-    val m = candidates.map { case ((d1Id, d1), (d2Id, d2)) => ((d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2) / (d1.length + d2.length)) }
       .filter(_._3 <= threshold)
       .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)

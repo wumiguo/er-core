@@ -23,6 +23,17 @@ object CommonFunctions {
     }.filter(!_._2.trim.isEmpty)
   }
 
+  def extractFieldArray(profiles: RDD[Profile], fieldNames: Array[String]): RDD[(Int, Array[String])] = {
+    log.debug("extract fields {}", fieldNames.toList)
+    profiles.map { p =>
+      (p.id, {
+        fieldNames.map(f => {
+          p.attributes.filter(_.key == f).map(_.value).mkString(" ").toLowerCase()
+        })
+      })
+    }
+  }
+
   def extractAllFields(profiles: RDD[Profile]): RDD[(Int, String)] = {
     profiles.map { profile =>
       (profile.id, profile.attributes.map(_.value).mkString(" ").toLowerCase)

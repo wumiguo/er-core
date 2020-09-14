@@ -35,6 +35,21 @@ trait SimJoinCommonTrait {
   }
 
 
+  def collectAttributesPairFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration):
+  (RDD[(Int, Array[String])], RDD[(Int, Array[String])]) = {
+    log.info("dataSet1Attr=" + dataSet1.joinAttrs.toList + " vs dataSet2Attr=" + dataSet2.joinAttrs.toList)
+    val attributes1 = CommonFunctions.extractFieldArray(profiles1, dataSet1.joinAttrs)
+    val attributes2 = CommonFunctions.extractFieldArray(profiles2, dataSet2.joinAttrs)
+    if (!attributes1.isEmpty()) {
+      attributes1.take(3).foreach(x => log.info("dataSet1=" + x._1 + " " + x._2.toSeq))
+    }
+    if (!attributes2.isEmpty()) {
+      attributes2.take(3).foreach(x => log.info("dataSet2=" + x._1 + " " + x._2.toSeq))
+    }
+    val attributesArray = (attributes1, attributes2)
+    attributesArray
+  }
+
   def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfig, dataSet2: DataSetConfig): ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
     var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
     log.info("dataSet1Attr=" + dataSet1.attributes.toList + " vs dataSet2Attr=" + dataSet2.attributes.toList)

@@ -11,6 +11,8 @@ class EdFiltersTest extends FlatSpec {
   it should "getPrefixLen " in {
     val len = EdFilters.getPrefixLen(2, 2)
     assertResult(2 * 2 + 1)(len)
+    val len2 = EdFilters.getPrefixLen(3, 2)
+    assertResult(3 * 2 + 1)(len2)
   }
 
 }
