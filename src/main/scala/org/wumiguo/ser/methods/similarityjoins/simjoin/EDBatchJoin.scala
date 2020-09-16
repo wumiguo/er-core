@@ -401,7 +401,7 @@ object EDBatchJoin {
 
     val t2 = Calendar.getInstance().getTimeInMillis
 
-    val m = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => (attrId, (d1Id, d1), (d2Id, d2), (Math.max(d1.length, d2.length))-CommonEdFunctions.editDist(d1, d2) )/ Math.max(d1.length, d2.length)) }
+    val m = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => (attrId, (d1Id, d1), (d2Id, d2), (Math.max(d1.length, d2.length)-CommonEdFunctions.editDist(d1, d2) )/ Math.max(d1.length, d2.length)) }
       .filter(_._4 <= threshold)
       .map { case (attrId, (d1Id, d1), (d2Id, d2), ed) => (attrId, d1Id, d2Id, ed.toDouble * weightIndex(attrId)) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
