@@ -23,7 +23,7 @@ class EDJoinTest extends AnyFlatSpec with SparkEnvSetup {
     )(qgram3(0)._3)
   }
 
-  it should "buildPrefixIndex will group string by token" in {
+  it should "buildPrefixIndex will filter and group string by token" in {
     val docs = spark.sparkContext.parallelize(
       Seq(
         (0, "abcd", Array(("ab", 0), ("bc", 1), ("cd", 2))),
@@ -44,7 +44,7 @@ class EDJoinTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
 
-  it should "buildPrefixIndex will group string by token v2" in {
+  it should "buildPrefixIndex will filter and group string by token v2" in {
     val docsRdd = spark.sparkContext.makeRDD(Seq[(Int, String, Array[(String, Int)])](
       (1, "nice day", Array(("nice", 0), (" day", 1))),
       (2, "good day", Array(("good", 0), (" day", 1))),
@@ -64,7 +64,7 @@ class EDJoinTest extends AnyFlatSpec with SparkEnvSetup {
     )(prefixIndex(1)._2.map(_._4))
   }
 
-  it should "buildPrefixIndex will group string by token v3" in {
+  it should "buildPrefixIndex will filter and group string by token v3" in {
     val docsRdd = spark.sparkContext.makeRDD(Seq[(Int, String, Array[(String, Int)])](
       (1, "nice day", Array(("nice", 0), (" day", 1))),
       (2, "good day", Array(("good", 0), (" day", 1))),

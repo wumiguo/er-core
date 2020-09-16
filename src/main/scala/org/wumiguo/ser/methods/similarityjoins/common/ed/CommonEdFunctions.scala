@@ -3,6 +3,8 @@ package org.wumiguo.ser.methods.similarityjoins.common.ed
 import org.apache.spark.rdd.RDD
 import org.wumiguo.ser.methods.similarityjoins.datastructure.Qgram
 
+import scala.collection.immutable
+
 /**
  * @author levinliu
  *         Created on 2020/6/11
@@ -58,6 +60,16 @@ object CommonEdFunctions {
     allQgrams.groupBy(x => x).map(x => (x._1, x._2.size)).collectAsMap().toMap
   }
 
+  def getQgramsTf2(docs: RDD[(Int, Int, Array[(String, Int)])]): Map[Int, Map[String, Int]] = {
+    docs.groupBy(_._1).map {
+      case (attrId, attr) => {
+        val allQGrams = attr.flatMap { case (aId, docId, qgrams) => qgrams.map { case (str, pos) => str } }
+        val tokenMap = allQGrams.groupBy(x => x).map(x => (x._1, x._2.size)).toMap
+        Map(attrId -> tokenMap)
+      }
+    }.reduce(_ ++ _)
+  }
+
   /**
    * Sort the q-grams within the document by their document frequency
    **/
@@ -86,6 +98,45 @@ object CommonEdFunctions {
       (docId, doc, sortedQgrams)
     }
   }
+
+
+  def getSortedQgrams3(docs: RDD[(Int, Int, String, Array[(String, Int)])]): RDD[(Int, String, Array[(Int, Int)])] = {
+    //output [(be,2),(cd,2),(ks,158)...] not ordered
+    val tf = getQgramsTf(docs.map(x => (x._2, x._4)))
+    //output {token:token id also index of tokens order by term frequency,...}
+    // {"xy":1,"bc":2,"ab":3,...}
+    val tf2 = docs.context.broadcast(
+      //sort by term frequency increasing(idf decreasing)
+      tf.toList.sortBy(_._2).
+        zipWithIndex.map(x => (x._1._1, x._2)).toMap)
+    docs.map { case (attrId, docId, doc, qgrams) =>
+      //output [(tokenId,token position of q-gram)]
+      //[(617,28).(641,29),(726,25)...]
+      val sortedQgrams = qgrams.map(q => (tf2.value(q._1), q._2)).sortBy(q => q)
+      (docId, doc, sortedQgrams)
+    }
+  }
+
+  def getSortedQgrams4(docs: RDD[(Int, Int, String, Array[(String, Int)])]): RDD[(Int, Int, String, Array[(Int, Int)])] = {
+    //output [(be,2),(cd,2),(ks,158)...] not ordered
+    val tfMap = getQgramsTf2(docs.map(x => (x._1, x._2, x._4)))
+    //output {token:token id also index of tokens order by term frequency,...}
+    // {"xy":1,"bc":2,"ab":3,...}
+    val tf2 = docs.context.broadcast(
+      //sort by term frequency increasing(idf decreasing)
+      tfMap.map(tf=>{
+        val sortedTf = tf._2.toList.sortBy(_._2).
+        zipWithIndex.map(x => (x._1._1, x._2)).toMap
+        Map(tf._1->sortedTf)
+      }).reduce(_++_))
+    docs.map { case (attrId, docId, doc, qgrams) =>
+      //output [(tokenId,token position of q-gram)]
+      //[(617,28).(641,29),(726,25)...]
+      val sortedQgrams = qgrams.map(q => (tf2.value(attrId)(q._1), q._2)).sortBy(q => q)
+      (attrId, docId, doc, sortedQgrams)
+    }
+  }
+
 
   /**
    * Given the list of documents with the ordered q-grams, create the prefix index.

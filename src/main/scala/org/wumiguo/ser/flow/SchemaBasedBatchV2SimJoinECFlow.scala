@@ -121,7 +121,7 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
       algorithm match {
         case ALGORITHM_EDJOIN =>
           val attributes = pair._1.union(pair._2)
-          EDBatchJoin.getMatches(attributes, q.toInt, threshold.toInt)
+          EDBatchJoin.getMatchesV2(attributes, q.toInt, threshold.toInt,weights.zipWithIndex.map(_.swap).toMap)
         case _ => throw new RuntimeException("Unsupported algo " + algorithm)
       }
     }

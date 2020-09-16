@@ -19,9 +19,10 @@ class CommonEdFunctionsTest extends FlatSpec with SparkEnvSetup {
       (5, Array(("spark", 4), ("bd", 1), ("bd", 6)))
     ))
     val map = CommonEdFunctions.getQgramsTf(docsRdd)
-    map.foreach(x => println(x))
     assertResult(3)(map.get("bd").get)
-    assertResult(1)(map.get("program").get)
+    assertResult(Map(
+      "program" -> 1, "test" -> 1, "world" -> 1, "bd" -> 3,
+      "spark" -> 2, "tech" -> 1, "hello" -> 2))(map)
   }
 
   it should "getQgramsTf v2 with normal input with equal string size in doc array" in {
@@ -31,13 +32,34 @@ class CommonEdFunctionsTest extends FlatSpec with SparkEnvSetup {
       (3, Array(("samp", 0), ("le d", 1), ("data", 2))), //"sample data",
       (4, Array(("hi", 0))) //"hi"
     ))
-    val mapRdd = CommonEdFunctions.getQgramsTf(docsRdd)
-    mapRdd.foreach(x => println("qgram=" + x))
-    assertResult(None)(mapRdd.get("bd"))
-    assertResult(1)(mapRdd.get("it's").get)
-    assertResult(2)(mapRdd.get("tech").get)
-    assertResult(1)(mapRdd.get("hi").get)
+    val map = CommonEdFunctions.getQgramsTf(docsRdd)
+    assertResult(None)(map.get("bd"))
+    assertResult(2)(map.get("tech").get)
+    assertResult(Map(
+      "it's" -> 1, "a tec" -> 1, "ut t" -> 1, "o bi" -> 1,
+      "samp" -> 1, "data" -> 1, " abo" -> 1, "hell" -> 1,
+      "gdat" -> 1, "le d" -> 1, "tech" -> 2, "hi" -> 1,
+      " all" -> 1))(map)
   }
+
+
+  it should "getQgramsTf2  with normal input with equal string size in doc array" in {
+    val docsRdd = spark.sparkContext.makeRDD(Seq[(Int, Int, Array[(String, Int)])](
+      (0, 1, Array(("hell", 0), ("o bi", 1), ("gdat", 2), ("a tec", 3), ("tech", 4))), //"hello bigdata tech"
+      (0, 2, Array(("it's", 0), (" all", 1), (" abo", 2), ("ut t", 3), ("tech", 4))), //"it's all about tech"
+      (1, 3, Array(("samp", 0), ("le d", 1), ("data", 2))), //"sample data",
+      (1, 4, Array(("hi", 0))) //"hi"
+    ))
+    val map = CommonEdFunctions.getQgramsTf2(docsRdd)
+    assertResult(None)(map.get(0).getOrElse(Map()).get("bd"))
+    assertResult(2)(map.get(0).getOrElse(Map()).get("tech").get)
+    assertResult(Map(
+      1 -> Map("data" -> 1, "samp" -> 1, "le d" -> 1, "hi" -> 1),
+      0 -> Map("it's" -> 1, "a tec" -> 1, "ut t" -> 1, "o bi" -> 1,
+        " abo" -> 1, "hell" -> 1, "gdat" -> 1, "tech" -> 2,
+        " all" -> 1)))(map)
+  }
+
 
   it should "getQgrams" in {
     val str = "hello bigdata-tech, handle super big volume of data in the world! bigdata is a great tech in the world"
@@ -115,6 +137,7 @@ class CommonEdFunctionsTest extends FlatSpec with SparkEnvSetup {
     //0=itis, 1=samp, 2=obig, 3=0all,
     //4=leda, 5=alla, 6=bout, 7=alld
     //8=hi a, 9=hell, 10=tech, 11=data
+    //sort from rarest to most common occurrence
     assertResult(List(
       (1, "hellobigdatatech", List((2, 1), (9, 0), (10, 3), (11, 2))),
       (2, "itisallabouttech", List((0, 2), (5, 0), (6, 1), (10, 4))),
@@ -124,6 +147,65 @@ class CommonEdFunctionsTest extends FlatSpec with SparkEnvSetup {
       (7, "tech", List((10, 0))),
       (8, "helloall", List((3, 1), (9, 0)))
     ))(data.map(x => (x._1, x._2, x._3.toList)))
+  }
+
+
+  it should "getSortedQgrams4 v1 " in {
+    val docsRdd = spark.sparkContext.makeRDD(Seq[(Int, Int, String, Array[(String, Int)])](
+      (1, 1, "hellobigdatatech", Array(("hell", 0), ("obig", 1), ("data", 2), ("tech", 3))),
+      (1, 2, "itisallabouttech", Array(("itis", 0), ("alla", 1), ("bout", 2), ("tech", 4))),
+      (1, 3, "sampledata", Array(("samp", 0), ("leda", 1), ("data", 2))),
+      (1, 4, "hi data", Array(("hi d", 0), ("data", 1))),
+      (1, 6, "alldata", Array(("alld", 0), ("data", 1))),
+      (1, 7, "tech", Array(("tech", 0))),
+      (1, 8, "helloall", Array(("hell", 0), ("oall", 1)))
+    ))
+    val sortedQg = CommonEdFunctions.getSortedQgrams4(docsRdd)
+    val data = sortedQg.collect.toList
+    data.foreach(x => println("sorted=" + x._1 + "," + x._2 + "," + x._3.toList))
+    //0=itis, 1=samp, 2=obig, 3=0all,
+    //4=leda, 5=alla, 6=bout, 7=alld
+    //8=hi a, 9=hell, 10=tech, 11=data
+    //sort from rarest to most common occurrence
+    assertResult(List(
+      (1, 1, "hellobigdatatech", List((2, 1), (9, 0), (10, 3), (11, 2))),
+      (1, 2, "itisallabouttech", List((0, 2), (5, 0), (6, 1), (10, 4))),
+      (1, 3, "sampledata", List((1, 0), (4, 1), (11, 2))),
+      (1, 4, "hi data", List((8, 0), (11, 1))),
+      (1, 6, "alldata", List((7, 0), (11, 1))),
+      (1, 7, "tech", List((10, 0))),
+      (1, 8, "helloall", List((3, 1), (9, 0)))
+    ))(data.map(x => (x._1, x._2, x._3, x._4.toList)))
+  }
+
+
+  it should "getSortedQgrams4 v2 " in {
+    val docsRdd = spark.sparkContext.makeRDD(Seq[(Int, Int, String, Array[(String, Int)])](
+      (1, 1, "hellobigdatatech", Array(("hell", 0), ("obig", 1), ("data", 2), ("tech", 3))),
+      (1, 2, "itisallabouttech", Array(("itis", 0), ("alla", 1), ("bout", 2), ("tech", 4))),
+      (1, 3, "sampledata", Array(("samp", 0), ("leda", 1), ("data", 2))),
+      (1, 4, "hi data", Array(("hi d", 0), ("data", 1))),
+      (2, 6, "alldata", Array(("alld", 0), ("data", 1))),
+      (2, 7, "tech", Array(("tech", 0))),
+      (2, 8, "helloall", Array(("hell", 0), ("oall", 1)))
+    ))
+    val sortedQg = CommonEdFunctions.getSortedQgrams4(docsRdd)
+    val data = sortedQg.collect.toList
+    data.foreach(x => println("sorted=" + x._1 + "," + x._2 + "," + x._3.toList))
+    //0=itis, 1=samp, 2=hell, 3=obig,
+    //4=leda, 5=alla, 6=bout, 7="hi d"
+    //8=tech, 9=data
+    //0=alld, 1=hell, 2=oall, 3=tech, 4=data
+    //sort from rarest to most common occurrence
+    assertResult(List(
+      (1, 1, "hellobigdatatech", List((2, 0), (3, 1), (8, 3), (9, 2))),
+      (1, 2, "itisallabouttech", List((0, 2), (5, 0), (6, 1), (8, 4))),
+      (1, 3, "sampledata", List((1, 0), (4, 1), (9, 2))),
+      (1, 4, "hi data", List((7, 0), (9, 1))),
+      (2, 6, "alldata", List((0, 1), (4, 0))),
+      (2, 7, "tech", List((3, 0))),
+      (2, 8, "helloall", List((1, 0), (2, 1)))
+    ))(data.map(x => (x._1, x._2, x._3, x._4.toList)))
   }
 
   it should "get editDist" in {
