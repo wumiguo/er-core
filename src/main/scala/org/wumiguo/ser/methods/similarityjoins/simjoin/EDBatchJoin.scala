@@ -401,8 +401,12 @@ object EDBatchJoin {
 
     val t2 = Calendar.getInstance().getTimeInMillis
 
-    val m = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => (attrId, (d1Id, d1), (d2Id, d2), (Math.max(d1.length, d2.length)-CommonEdFunctions.editDist(d1, d2) )/ Math.max(d1.length, d2.length)) }
+    val m = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => {
+      (attrId, (d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2), Math.max(d1.length, d2.length))
+    }
+    }
       .filter(_._4 <= threshold)
+      .map(x => (x._1, x._2, x._3, (x._5 - x._4) / x._5))
       .map { case (attrId, (d1Id, d1), (d2Id, d2), ed) => (attrId, d1Id, d2Id, ed.toDouble * weightIndex(attrId)) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
     val nm = m.count()
@@ -412,7 +416,7 @@ object EDBatchJoin {
     log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
     val aggr = m.groupBy(x => (x._2, x._3)).map {
       case ((p1, p2), detail) => {
-        val res = detail.map(x=>(x._2,x._3,x._4)).reduce((x, y) => (x._1, x._2, x._3 + y._3))
+        val res = detail.map(x => (x._2, x._3, x._4)).reduce((x, y) => (x._1, x._2, x._3 + y._3))
         res
       }
     }
