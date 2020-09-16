@@ -17,7 +17,7 @@ import scala.reflect.io.File
 class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(getClass.getName)
 
-  it should "call ERFlowLauncher v1" in {
+  it should "call ERFlowLauncher SSJoin " in {
     var flowArgs = Array[String]()
     flowArgs :+= "flowType=SSJoin"
     flowArgs ++= prepareDSConf()
@@ -44,7 +44,7 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     )(items)
   }
 
-  it should "call ERFlowLauncher v2" in {
+  it should "call ERFlowLauncher SSJoin v2" in {
     var flowArgs = Array[String]()
     flowArgs :+= "flowType=SSJoin"
     flowArgs :+= "dataSet1=" + TestDirs.resolveDataPath("flowdata/dt01.csv")
@@ -142,9 +142,9 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     )(items)
   }
 
-  ignore should "call ERFlowLauncher batch-join2" in {
+  it should "call ERFlowLauncher batch-joinv2" in {
     var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSBatch2Join"
+    flowArgs :+= "flowType=SSBatchV2Join"
     flowArgs ++= prepareDSConf()
     flowArgs :+= "joinFieldsWeight=1.0"
     flowArgs ++= prepareFlowOpts()
@@ -162,10 +162,10 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(List(
       Profile(0, mutable.MutableList(
         KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
+        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0),
       Profile(1, mutable.MutableList(
         KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0))
     )(items)
   }
 

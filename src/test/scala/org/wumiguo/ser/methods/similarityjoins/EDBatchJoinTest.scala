@@ -238,19 +238,46 @@ class EDBatchJoinTest extends AnyFlatSpec with SparkEnvSetup {
   it should "getMatchesV2 should match string within edit distance is 1" in {
     val docs = spark.sparkContext.parallelize(
       Seq(
+        (1, Array("this string with 1 insert change")),
+        (2, Array("mthis string with 1 insert change")),
+        (3, Array("this string with 1 substitution change")),
+        (4, Array("mhis string with 1 substitution change")),
+        (5, Array("this string with 1 delete change")),
+        (6, Array("his string with 1 delete change")),
+        (7, Array("first")),
+        (8, Array("second")),
+        (9, Array("same string")),
+        (10, Array("same string"))
+      ))
+    val results1 = getMatchesV2(docs, 3, 1, Map(0 -> 1.0)).collect
+    assertResult(
+      Array((1, 2, 0.9696969696969697), (3, 4, 0.9736842105263158), (5, 6, 0.96875),(9,10,1.0))
+    )(results1.sortBy(_._1))
+    val docs2 = spark.sparkContext.parallelize(
+      Seq(
         (1, Array("this string with 1 insert change", "test data")),
-        (2, Array("mthis string with 1 insert change", "teet data")),
-        (3, Array("this string with 1 substitution change", "join resu")),
-        (4, Array("mhis string with 1 substitution change", "joint resu")),
+        (2, Array("mthis string with 1 insert change", "test datu")),
+        (3, Array("this string with 1 substitution change", "coin resu")),
+        (4, Array("mhis string with 1 substitution change", "join resu")),
         (5, Array("this string with 1 delete change", "noe")),
         (6, Array("his string with 1 delete change", "ne")),
         (7, Array("first")),
-        (8, Array("second"))
+        (8, Array("second")),
+        (9, Array("same string", "same")),
+        (10, Array("same string", "same"))
       ))
-    val results = getMatchesV2(docs, 3, 1, Map(0 -> 0.5, 1 -> 0.5)).collect
+    val results2 = getMatchesV2(docs2, 3, 1, Map(0 -> 0.5, 1 -> 0.5)).collect
     assertResult(
-      Array((1, 2, 0.0), (3, 4, 0.0), (5, 6, 0.0))
-    )(results.sortBy(_._1))
+      Array((1, 2, 0.9292929292929293), (3, 4, 0.9312865497076024), (5, 6, 0.484375), (9, 10, 1.0))
+    )(results2.sortBy(_._1))
+    val results3 = getMatchesV2(docs2, 3, 1, Map(0 -> 0.0, 1 -> 1.0)).collect
+    assertResult(
+      Array((1, 2, 0.8888888888888888), (3, 4, 0.8888888888888888), (5, 6, 0.0), (9, 10, 1.0))
+    )(results3.sortBy(_._1))
+    val results4 = getMatchesV2(docs2, 2, 1, Map(0 -> 0.0, 1 -> 1.0)).collect
+    assertResult(
+      Array((1, 2, 0.8888888888888888), (3, 4, 0.8888888888888888), (5, 6, 0.0), (9, 10, 1.0))
+    )(results4.sortBy(_._1))
   }
 
 

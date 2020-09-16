@@ -406,7 +406,7 @@ object EDBatchJoin {
     }
     }
       .filter(_._4 <= threshold)
-      .map(x => (x._1, x._2, x._3, (x._5 - x._4) / x._5))
+      .map(x => (x._1, x._2, x._3, (x._5 - x._4) / x._5.toDouble))
       .map { case (attrId, (d1Id, d1), (d2Id, d2), ed) => (attrId, d1Id, d2Id, ed.toDouble * weightIndex(attrId)) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
     val nm = m.count()
