@@ -235,6 +235,24 @@ class EDBatchJoinTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(Array())(results.sortBy(_._1))
   }
 
+  it should "getMatchesV2 should match string within edit distance is 1" in {
+    val docs = spark.sparkContext.parallelize(
+      Seq(
+        (1, Array("this string with 1 insert change", "test data")),
+        (2, Array("mthis string with 1 insert change", "teet data")),
+        (3, Array("this string with 1 substitution change", "join resu")),
+        (4, Array("mhis string with 1 substitution change", "joint resu")),
+        (5, Array("this string with 1 delete change", "noe")),
+        (6, Array("his string with 1 delete change", "ne")),
+        (7, Array("first")),
+        (8, Array("second"))
+      ))
+    val results = getMatchesV2(docs, 3, 1, Map(0 -> 0.5, 1 -> 0.5)).collect
+    assertResult(
+      Array((1, 2, 1.0), (3, 4, 1.0), (5, 6, 1.0))
+    )(results.sortBy(_._1))
+  }
+
 
   it should "getMatches exactly aka edit distance=0" in {
     val docs = spark.sparkContext.parallelize(
@@ -381,7 +399,7 @@ class EDBatchJoinTest extends AnyFlatSpec with SparkEnvSetup {
 
 
   ignore should "getCandidatePairsV2 v3" in {
-    val docsRdd = spark.sparkContext.makeRDD(Seq[(Int,Int, String, Array[(String, Int)])](
+    val docsRdd = spark.sparkContext.makeRDD(Seq[(Int, Int, String, Array[(String, Int)])](
       (0, 1, "nice day", Array(("nice", 0), (" day", 1))),
       (0, 2, "good day", Array(("good", 0), (" day", 1))),
       (0, 3, "date", Array(("date", 0))),
