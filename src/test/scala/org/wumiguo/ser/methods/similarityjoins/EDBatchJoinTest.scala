@@ -249,7 +249,7 @@ class EDBatchJoinTest extends AnyFlatSpec with SparkEnvSetup {
       ))
     val results = getMatchesV2(docs, 3, 1, Map(0 -> 0.5, 1 -> 0.5)).collect
     assertResult(
-      Array((1, 2, 1.0), (3, 4, 1.0), (5, 6, 1.0))
+      Array((1, 2, 0.0), (3, 4, 0.0), (5, 6, 0.0))
     )(results.sortBy(_._1))
   }
 
