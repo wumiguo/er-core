@@ -127,9 +127,9 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     }
 
     var attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributeArrayPair)
-//    if (weighted) {
-//      attributesMatches = attributesMatches.map(x => (x._1, x._2, weights(0) / (x._3 + 1)))
-//    }
+    //    if (weighted) {
+    //      attributesMatches = attributesMatches.map(x => (x._1, x._2, weights(0) / (x._3 + 1)))
+    //    }
     //    for (i <- 1 until attributeArrayPair.length) {
     //      val next = attributePairsArray(i)
     //      if (weighted) {

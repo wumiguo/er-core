@@ -15,25 +15,32 @@ import scala.collection.mutable.ArrayBuffer
  */
 class SchemaBasedBatchV2SimJoinECFlowTest extends AnyFlatSpec with SparkEnvSetup {
   val spark = createLocalSparkSession(getClass.getName)
-  it should "doJoin weighted against 1 attr pair" in {
+  it should "doJoin weighted " in {
     val flowOptions = FlowOptions.getOptions(Array("optionSize=3", "option0=algorithm:EDJoin", "option1=threshold:0", "option2=q:2"))
-    val weights = List(1.0)
     var attrPairArray = (
       spark.sparkContext.makeRDD(Seq((1, Array("AE0024")))),
       spark.sparkContext.makeRDD(Seq((5, Array("GAE0024"))))
     )
-    val res = doJoin(flowOptions, attrPairArray, true, weights)
+    val res = doJoin(flowOptions, attrPairArray, true, List(1.0))
     assertResult(true)(res.isEmpty())
     val flowOptions2 = FlowOptions.getOptions(Array("optionSize=3", "option0=algorithm:EDJoin", "option1=threshold:1", "option2=q:2"))
-    val res2 = doJoin(flowOptions2, attrPairArray, true, weights)
+    val res2 = doJoin(flowOptions2, attrPairArray, true, List(1.0))
     assertResult(false)(res2.isEmpty())
     assertResult(List((1, 5, 0.8571428571428571)))(res2.collect.toList)
     attrPairArray = (
       spark.sparkContext.makeRDD(Seq((1, Array("AE0024")))),
       spark.sparkContext.makeRDD(Seq((5, Array("AE0024"))))
     )
-    val res3 = doJoin(flowOptions2, attrPairArray, true, weights)
+    val res3 = doJoin(flowOptions2, attrPairArray, true, List(1.0))
     assertResult(List((1, 5, 1.0)))(res3.collect.toList)
+    attrPairArray = (
+      spark.sparkContext.makeRDD(Seq((1, Array("AE0024", "DEFG")))),
+      spark.sparkContext.makeRDD(Seq((5, Array("AE0024", "DEFF"))))
+    )
+    val res4 = doJoin(flowOptions2, attrPairArray, true, List(1.0, 0.0))
+    assertResult(List((1, 5, 1.0)))(res4.collect.toList)
+    val res5 = doJoin(flowOptions2, attrPairArray, true, List(0.5, 0.5))
+    assertResult(List((1, 5, 0.875)))(res5.collect.toList)
   }
   //
   //  it should "doJoin unweighted" in {
@@ -57,7 +64,6 @@ class SchemaBasedBatchV2SimJoinECFlowTest extends AnyFlatSpec with SparkEnvSetup
   //    attrPairArray :+= (spark.sparkContext.makeRDD(Seq((1, "UPGK882"))), spark.sparkContext.makeRDD(Seq((5, "UPGK882"))))
   //    val res4 = doJoin(flowOptions2, attrPairArray, weighted, weights).collect.toList
   //    assertResult(List((1, 5, 0.0)))(res4)
-  //
   //  }
   //
   //  it should "doJoin weighted simple" in {
