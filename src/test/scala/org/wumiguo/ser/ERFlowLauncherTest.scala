@@ -25,11 +25,11 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs ++= prepareFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_join"
+    flowArgs :+= "joinResultFile=" + "tp_ss_join"
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join.csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_ss_join.csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
@@ -150,22 +150,22 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs ++= prepareFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_join_batch2"
+    flowArgs :+= "joinResultFile=" + "tp_join_batchv2"
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join_batch2.csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join_batchv2.csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
     assertResult(List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0),
+        KeyValue("Similarity", "0.8333333333333334"), KeyValue("P1-ID", "TCN001278"),
+        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
       Profile(1, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0))
+        KeyValue("Similarity", "1.0E-6"), KeyValue("P1-ID", "TCN001278"),
+        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
     )(items)
   }
 

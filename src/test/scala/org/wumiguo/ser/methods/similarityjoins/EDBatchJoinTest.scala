@@ -249,7 +249,7 @@ class EDBatchJoinTest extends AnyFlatSpec with SparkEnvSetup {
         (9, Array("same string")),
         (10, Array("same string"))
       ))
-    val results1 = getMatchesV2(docs, 3, 1, Map(0 -> 1.0)).collect
+    val results1 = getMatchesV2(docs, 3, 1,true, Map(0 -> 1.0)).collect
     assertResult(
       Array((1, 2, 0.9696969696969697), (3, 4, 0.9736842105263158), (5, 6, 0.96875),(9,10,1.0))
     )(results1.sortBy(_._1))
@@ -266,15 +266,15 @@ class EDBatchJoinTest extends AnyFlatSpec with SparkEnvSetup {
         (9, Array("same string", "same")),
         (10, Array("same string", "same"))
       ))
-    val results2 = getMatchesV2(docs2, 3, 1, Map(0 -> 0.5, 1 -> 0.5)).collect
+    val results2 = getMatchesV2(docs2, 3, 1,true, Map(0 -> 0.5, 1 -> 0.5)).collect
     assertResult(
       Array((1, 2, 0.9292929292929293), (3, 4, 0.9312865497076024), (5, 6, 0.484375), (9, 10, 1.0))
     )(results2.sortBy(_._1))
-    val results3 = getMatchesV2(docs2, 3, 1, Map(0 -> 0.0, 1 -> 1.0)).collect
+    val results3 = getMatchesV2(docs2, 3, 1,true, Map(0 -> 0.0, 1 -> 1.0)).collect
     assertResult(
       Array((1, 2, 0.8888888888888888), (3, 4, 0.8888888888888888), (5, 6, 0.0), (9, 10, 1.0))
     )(results3.sortBy(_._1))
-    val results4 = getMatchesV2(docs2, 2, 1, Map(0 -> 0.0, 1 -> 1.0)).collect
+    val results4 = getMatchesV2(docs2, 2, 1,true, Map(0 -> 0.0, 1 -> 1.0)).collect
     assertResult(
       Array((1, 2, 0.8888888888888888), (3, 4, 0.8888888888888888), (5, 6, 0.0), (9, 10, 1.0))
     )(results4.sortBy(_._1))

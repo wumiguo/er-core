@@ -74,8 +74,12 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
       log.info("[SSJoin] First matches " + matchDetails.first())
     }
     val profiles = profiles1.union(profiles2)
-    val clusters = ConnectedComponentsClustering.getClusters(profiles,
-      matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
+    val clusters = if (showSimilarity.toBoolean) {
+      ConnectedComponentsClustering.linkWeightedCluster(profiles,
+        matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
+    } else {
+      ConnectedComponentsClustering.getWeightedClustersV2(profiles, matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
+    }
     clusters.cache()
     val cn = clusters.count()
     val t4 = Calendar.getInstance().getTimeInMillis
@@ -84,25 +88,26 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
 
     log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
 
-    val matchedPairs = clusters.map(_._2).flatMap(idSet => {
-      val pairs = new ArrayBuffer[(Int, Int)]()
-      val idArray = idSet.toArray
+    val matchedPairs = clusters.map(_._2).flatMap { case (ids, map) => {
+      val pairs = new ArrayBuffer[(Int, Int, Double)]()
+      val idArray = ids.toArray
       for (i <- 0 until idArray.length) {
         val target: Int = idArray(i)
         for (j <- i + 1 until idArray.length) {
           val source = idArray(j)
-          pairs += ((target, source))
+          pairs += ((target, source, map.getOrElse((target, source), map.getOrElse((source, target), 10E-6))))
         }
       }
       pairs
-    })
+    }
+    }
     if (!matchedPairs.isEmpty()) {
       matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
       matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
     }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
-    val (columnNames, rows) = ERResultRender.renderResult(dataSet1, dataSet2,
+    val (columnNames, rows) = ERResultRender.renderResultV2(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim)
     val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
@@ -121,7 +126,7 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
       algorithm match {
         case ALGORITHM_EDJOIN =>
           val attributes = pair._1.union(pair._2)
-          EDBatchJoin.getMatchesV2(attributes, q.toInt, threshold.toInt,weights.zipWithIndex.map(_.swap).toMap)
+          EDBatchJoin.getMatchesV2(attributes, q.toInt, threshold.toInt, weighted, weights.zipWithIndex.map(_.swap).toMap)
         case _ => throw new RuntimeException("Unsupported algo " + algorithm)
       }
     }

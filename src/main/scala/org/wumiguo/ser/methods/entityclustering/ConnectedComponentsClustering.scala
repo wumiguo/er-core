@@ -34,9 +34,11 @@ object ConnectedComponentsClustering extends EntityClusteringTrait {
   def getWeightedClustersV2(profiles: RDD[Profile], edges: RDD[WeightedEdge],
                             maxProfileID: Int, edgesThreshold: Double = 0,
                             separatorID: Int = -1): RDD[(Int, (Set[Int], Map[(Int, Int), Double]))] = {
-    val cc = connectedComponents(edges.filter(_.weight >= edgesThreshold))
-    val a = cc.map(x => x.flatMap(y => (y._1, Map(y._1 -> y._2 -> y._3)) :: (y._2, Map(y._1 -> y._2 -> y._3)) :: Nil)).zipWithIndex().map(x => (x._2.toInt, x._1))
-    a.map(x => (x._1, (x._2.map(_._1).toSet, x._2.map(_._2).reduce((x, y) => x ++ y))))
+    val connectedComp = connectedComponents(edges.filter(_.weight >= edgesThreshold))
+    val pairs = connectedComp
+      .map(x => x.flatMap(y => (y._1, Map(y._1 -> y._2 -> y._3)) :: (y._2, Map(y._1 -> y._2 -> y._3)) :: Nil))
+      .zipWithIndex().map(x => (x._2.toInt, x._1))
+    pairs.map(x => (x._1, (x._2.map(_._1).toSet, x._2.map(_._2).reduce((x, y) => x ++ y))))
   }
 
   def linkWeightedCluster(profiles: RDD[Profile], edges: RDD[WeightedEdge],
@@ -56,7 +58,7 @@ object ConnectedComponentsClustering extends EntityClusteringTrait {
           }
         }
         //TODO: use graph algo to calculate the path
-        pairs.filter(p => p._1 != p._2).map(p => Map(p -> y._2.getOrElse(p, 0.0))).reduce(_ ++ _)
+        pairs.filter(p => p._1 != p._2).map(p => Map(p -> y._2.getOrElse(p, y._2.getOrElse(p.swap, 1.0E-6)))).reduce(_ ++ _)
       })
       )
     })

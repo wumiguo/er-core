@@ -392,14 +392,18 @@ object EDBatchJoin {
    * @param weightIndex
    * @return
    */
-  def getMatchesV2(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int, weightIndex: Map[Int, Double]): RDD[(Int, Int, Double)] = {
+  def getMatchesV2(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int, weighted: Boolean, weightIndex: Map[Int, Double]): RDD[(Int, Int, Double)] = {
     val log = LogManager.getRootLogger
     log.info("[EDJoin] first document " + documents.first())
-
     val t1 = Calendar.getInstance().getTimeInMillis
     val candidates = getCandidates(documents, qgramLength, threshold)
 
     val t2 = Calendar.getInstance().getTimeInMillis
+    val attrLength = if (documents.isEmpty) {
+      0
+    } else {
+      documents.first()._2.size
+    }
 
     val m = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => {
       (attrId, (d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2), Math.max(d1.length, d2.length))
@@ -407,7 +411,15 @@ object EDBatchJoin {
     }
       .filter(_._4 <= threshold)
       .map(x => (x._1, x._2, x._3, (x._5 - x._4) / x._5.toDouble))
-      .map { case (attrId, (d1Id, d1), (d2Id, d2), ed) => (attrId, d1Id, d2Id, ed.toDouble * weightIndex(attrId)) }
+      .map {
+        case (attrId, (d1Id, d1), (d2Id, d2), ed) => {
+          if (weighted) {
+            (attrId, d1Id, d2Id, ed.toDouble * weightIndex(attrId))
+          } else {
+            (attrId, d1Id, d2Id, ed.toDouble / attrLength)
+          }
+        }
+      }
     m.persist(StorageLevel.MEMORY_AND_DISK)
     val nm = m.count()
     val t3 = Calendar.getInstance().getTimeInMillis

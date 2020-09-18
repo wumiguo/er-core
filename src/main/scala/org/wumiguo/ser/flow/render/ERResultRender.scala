@@ -17,6 +17,112 @@ import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 object ERResultRender extends Serializable{
   val log = LoggerFactory.getLogger(this.getClass.getName)
 
+  def renderResultV2(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
+                   matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int,Double)],
+                   showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
+    log.info("showSimilarity=" + showSimilarity)
+    val spark = SparkSession.builder().getOrCreate()
+    if (showSimilarity) {
+      log.info("matchedPairsWithSimilarityCount=" + matchedPairs.count())
+      val profileMatches2 = mapMatchesWithProfilesAndSimilarity(matchedPairs, profiles, secondEPStartID)
+      log.info("profileMatchesCount=" + profileMatches2.count())
+      val matchesInDiffDataSet2 = profileMatches2.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+      log.info("matchesInDiffDataSet2 size =" + matchesInDiffDataSet2.count())
+      val finalMap2 = matchesInDiffDataSet2.map(x => (x._1._1.originalID, x._1._2.originalID, x._1._3))
+      log.info("finalmap2 size =" + finalMap2.count())
+
+      val p1IDFilterOption = finalMap2.map(x => KeyValue(dataSet1.idField, x._1)).toLocalIterator.toList
+      val finalProfiles1 = getProfileLoader(dataSet1.path).load(dataSet1.path, realIDField = dataSet1.idField,
+        startIDFrom = 0, sourceId = 0, keepRealID = dataSet1.includeRealID, fieldsToKeep = dataSet1.additionalAttrs.toList,
+        fieldValuesScope = p1IDFilterOption,
+        filter = SpecificFieldValueFilter
+      )
+      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p2IDFilterOption = finalMap2.map(x => KeyValue(dataSet2.idField, x._2)).toLocalIterator.toList
+      val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.idField,
+        startIDFrom = 0, sourceId = 1, keepRealID = dataSet2.includeRealID, fieldsToKeep = dataSet2.additionalAttrs.toList,
+        fieldValuesScope = p2IDFilterOption,
+        filter = SpecificFieldValueFilter
+      )
+      if (!finalProfiles1.isEmpty()) {
+        finalProfiles1.take(3).foreach(x => log.info("fp1=" + x))
+      }
+      if (!finalProfiles2.isEmpty()) {
+        finalProfiles2.take(3).foreach(x => log.info("fp2=" + x))
+      }
+      log.info("fp1count=" + finalProfiles1.count())
+      log.info("fp2count=" + finalProfiles2.count())
+      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
+      val rows = finalMap2.map(x => {
+        var entry = Seq[String]()
+        entry :+= x._3.toString
+        entry :+= x._1
+        val attr1 = p1B.value.filter(p => p.originalID == x._1).flatMap(p => p.attributes)
+        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
+        entry :+= x._2
+        val attr2 = p2B.value.filter(p => p.originalID == x._2).flatMap(p => p.attributes)
+        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
+        Row.fromSeq(entry)
+      })
+      (columnNames, rows)
+    } else {
+      val profileMatches = mapMatchesWithProfilesAndSimilarity(matchedPairs, profiles, secondEPStartID)
+      if (!profileMatches.isEmpty()) {
+        profileMatches.take(3).foreach(x => log.info("profileMatches=" + x))
+      }
+      log.info("profileMatchesCount=" + profileMatches.count())
+      val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+      log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
+      if (!matchesInDiffDataSet.isEmpty()) {
+        matchesInDiffDataSet.take(3).foreach(t => {
+          log.info("matches-pair=" +
+            (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
+        })
+      }
+      log.info("moreAttr1s=" + dataSet1.additionalAttrs.toList)
+      log.info("moreAttr2s=" + dataSet2.additionalAttrs.toList)
+      log.info("matchesInDiffDataSet1 size =" + matchesInDiffDataSet.count())
+      val finalMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
+      log.info("finalmap1 size =" + finalMap.count())
+
+      val p1IDFilterOption = finalMap.map(x => KeyValue(dataSet1.idField, x._1)).toLocalIterator.toList
+      val finalProfiles1 = getProfileLoader(dataSet1.path).load(dataSet1.path, realIDField = dataSet1.idField,
+        startIDFrom = 0, sourceId = 0, keepRealID = dataSet1.includeRealID, fieldsToKeep = dataSet1.additionalAttrs.toList,
+        fieldValuesScope = p1IDFilterOption,
+        filter = SpecificFieldValueFilter
+      )
+      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p2IDFilterOption = finalMap.map(x => KeyValue(dataSet2.idField, x._2)).toLocalIterator.toList
+      val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.idField,
+        startIDFrom = 0, sourceId = 0, keepRealID = dataSet2.includeRealID, fieldsToKeep = dataSet2.additionalAttrs.toList,
+        fieldValuesScope = p2IDFilterOption,
+        filter = SpecificFieldValueFilter
+      )
+      if (!finalProfiles1.isEmpty()) {
+        finalProfiles1.take(3).foreach(x => log.info("fp1=" + x))
+      }
+      if (!finalProfiles2.isEmpty()) {
+        finalProfiles2.take(3).foreach(x => log.info("fp2=" + x))
+      }
+      log.info("fp1count=" + finalProfiles1.count())
+      log.info("fp2count=" + finalProfiles2.count())
+      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
+      val rows = finalMap.map(x => {
+        var entry = Seq[String]()
+        entry :+= x._1
+        val attr1 = p1B.value.filter(p => p.originalID == x._1).flatMap(p => p.attributes)
+        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
+        entry :+= x._2
+        val attr2 = p2B.value.filter(p => p.originalID == x._2).flatMap(p => p.attributes)
+        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
+        Row.fromSeq(entry)
+      })
+      (columnNames, rows)
+    }
+  }
+
 
   def renderResult(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
                    matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
