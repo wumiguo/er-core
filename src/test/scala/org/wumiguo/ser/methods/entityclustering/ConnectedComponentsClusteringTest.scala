@@ -110,7 +110,7 @@ class ConnectedComponentsClusteringTest extends FlatSpec with SparkEnvSetup {
       0, (Set(11, 12, 1111),
       Map(
         (11, 12) -> 0.6,
-        (11, 1111) -> 0.0,
+        (11, 1111) -> 1.0E-6,
         (12, 1111) -> 0.4)
     )
     ))
