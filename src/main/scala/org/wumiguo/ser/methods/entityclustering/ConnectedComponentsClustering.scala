@@ -58,7 +58,7 @@ object ConnectedComponentsClustering extends EntityClusteringTrait {
           }
         }
         //TODO: use graph algo to calculate the path
-        pairs.filter(p => p._1 != p._2).map(p => Map(p -> y._2.getOrElse(p, y._2.getOrElse(p.swap, 1.0E-6)))).reduce(_ ++ _)
+        pairs.filter(p => p._1 != p._2).map(p => Map(p -> y._2.getOrElse(p, y._2.getOrElse(p.swap, 0.00001)))).reduce(_ ++ _)
       })
       )
     })

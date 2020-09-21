@@ -30,7 +30,7 @@ object CallERFlowLauncher {
     flowArgs +:= "option0=q:2"
     flowArgs +:= "option1=threshold:1" //0,1,2
     flowArgs +:= "option2=algorithm:EDJoin"
-    flowArgs +:= "option3=restrict:true"
+    flowArgs +:= "option3=relativeLinkageThreshold:0.000001"
     flowArgs +:= "outputPath=" + "output/trade-product"
     flowArgs +:= "outputType=" + "csv"
     flowArgs +:= "joinResultFile=" + "tp_join_v2"

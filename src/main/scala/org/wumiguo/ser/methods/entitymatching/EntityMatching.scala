@@ -108,7 +108,7 @@ object EntityMatching {
    * @param threshold           similarity thresholds for the Weighed Edges
    * @param matchingFunctions   the matching function that will compare the profiles
    * @return an RDD of WeightedEdges
-   **/
+   * */
   def entityMatchingCB(profiles: RDD[Profile], candidatePairs: RDD[UnweightedEdge], bcstep: Int,
                        matchingMethodLabel: String = "pm", threshold: Double = 0.5,
                        matchingFunctions: (Profile, Profile) => Double = MatchingFunctions.jaccardSimilarity)
@@ -131,12 +131,12 @@ object EntityMatching {
     val comparisonsRDD = getComparisons(candidatePairs, profilesID)
       .setName("ComparisonsPerPartition")
       .persist(StorageLevel.MEMORY_AND_DISK)
-    comparisonsRDD.foreach(x=>println("comparisonsRDD="+x))
+    //comparisonsRDD.foreach(x => println("comparisonsRDD=" + x))
     // construct RDD containing the profiles og each partition as Map - RDD[Map(ID -> Profile)]
     val profilesMap = getProfilesMap(profilesID)
       .setName("profilesMap")
       .cache()
-    profilesMap.foreach(x=>println("profilesMap="+x))
+    //profilesMap.foreach(x => println("profilesMap=" + x))
 
     // The RDD of the Matches is produced in a repetitive way
     // Collect and broadcast in parts (based on the step) the comparisonsRDD
@@ -149,19 +149,19 @@ object EntityMatching {
 
     while (partitionGroupIter.hasNext) {
       val partitionGroup = partitionGroupIter.next()
-      println("pg:"+partitionGroup)
+      //println("pg:" + partitionGroup)
       // collect and broadcast the comparisons
       val comparisonsPart = comparisonsRDD
         .mapPartitionsWithIndex((index, it) => if (partitionGroup.contains(index)) it else Iterator(), preservesPartitioning = true)
         .collect()
-      comparisonsPart.foreach(x=>println("comparisonsPart:"+x))
+      //comparisonsPart.foreach(x => println("comparisonsPart:" + x))
       val comparisonsPartBD = sc.broadcast(comparisonsPart)
       // perform comparisons
       val wEdges = profilesMap
         .flatMap { profilesMap1 =>
           comparisonsPartBD.value
             .flatMap { c =>
-              println("loopc:"+c._1 + ", " + c._2)
+              //println("loopc:" + c._1 + ", " + c._2)
               val profile1 = c._1
               val comparisons = c._2
               comparisons
@@ -171,7 +171,7 @@ object EntityMatching {
                 .filter(_.weight >= 0.5)
             }
         }
-      wEdges.foreach(x=>println("+ wEdges="+x))
+      //wEdges.foreach(x => println("+ wEdges=" + x))
 
       edgesArrayRDD = edgesArrayRDD :+ wEdges
     }
@@ -181,8 +181,8 @@ object EntityMatching {
       .setName("Matches")
       .persist(StorageLevel.MEMORY_AND_DISK)
     val matchesCount = matches.count()
-    matches.foreach(x=>println("matches="+x))
-    println("count+"+matchesCount)
+    //matches.foreach(x => println("matches=" + x))
+    //println("count+" + matchesCount)
     profilesMap.unpersist()
     comparisonsRDD.unpersist()
 

@@ -85,9 +85,8 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     val t4 = Calendar.getInstance().getTimeInMillis
     log.info("[SSJoin] Number of clusters " + cn)
     log.info("[SSJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
-
     log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
-
+    val innerCThreshold = flowOptions.getOrElse("relativeLinkageThreshold", "0.0").toDouble
     val matchedPairs = clusters.map(_._2).flatMap { case (ids, map) => {
       val pairs = new ArrayBuffer[(Int, Int, Double)]()
       val idArray = ids.toArray
@@ -95,7 +94,10 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
         val target: Int = idArray(i)
         for (j <- i + 1 until idArray.length) {
           val source = idArray(j)
-          pairs += ((target, source, map.getOrElse((target, source), map.getOrElse((source, target), 10E-6))))
+          val score = map.getOrElse((target, source), map.getOrElse((source, target), 10E-6))
+          if (score >= innerCThreshold) {
+            pairs += ((target, source, score))
+          }
         }
       }
       pairs
