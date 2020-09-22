@@ -14,6 +14,7 @@ class DataTypeResolverTest extends FlatSpec {
     assertResult(CSV)(DataTypeResolver.getDataType("a.CSV"))
     assertResult(JSON)(DataTypeResolver.getDataType("a.json"))
     assertResult(PARQUET)(DataTypeResolver.getDataType("a.parquet"))
+    assertResult(PARQUET)(DataTypeResolver.getDataType("a.PARQ"))
     var hasErr = false
     try {
       assertResult(PARQUET)(DataTypeResolver.getDataType("a.java"))

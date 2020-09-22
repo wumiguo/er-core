@@ -16,7 +16,7 @@ object DataTypeResolver {
       CSV
     } else if (theDataFile.endsWith(".json")) {
       JSON
-    } else if (theDataFile.endsWith(".parquet")) {
+    } else if (theDataFile.endsWith(".parquet") || theDataFile.endsWith(".parq")) {
       PARQUET
     } else throw new RuntimeException("Out of support data type " + DataType.values)
   }
