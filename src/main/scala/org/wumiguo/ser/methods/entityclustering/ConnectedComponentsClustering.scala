@@ -46,8 +46,8 @@ object ConnectedComponentsClustering extends EntityClusteringTrait {
                           separatorID: Int = -1): //Unit
   RDD[(Int, (Set[Int], Map[(Int, Int), Double]))]
   = {
-    val d = getWeightedClustersV2(profiles, edges, maxProfileID, edgesThreshold, separatorID)
-    d.map(x => {
+    val clustersWithWeights = getWeightedClustersV2(profiles, edges, maxProfileID, edgesThreshold, separatorID)
+    clustersWithWeights.map(x => {
       val y = x._2
       (x._1, (y._1, {
         val ids = y._1.toArray

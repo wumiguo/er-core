@@ -34,14 +34,38 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(List(
+    assertResult(3)(items.size)
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
-      Profile(1, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
-    )(items)
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+    ))
+  }
+
+  def sameIgnoreOrder(p1List: List[Profile], p2List: List[Profile]): Boolean = {
+    if (p1List.size == p2List.size) {
+      var counter = 0
+      for (p1 <- p1List) {
+        for (p2 <- p2List) {
+          if (p1 == p2) {
+            counter = counter + 1
+          }
+        }
+      }
+      val result = counter == p1List.size
+      if (!result) {
+        assertResult(p1List)(p2List)
+      }
+      result
+    } else {
+      assertResult(p1List)(p2List)
+      false
+    }
   }
 
   it should "call ERFlowLauncher para-join" in {
@@ -61,14 +85,16 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(List(
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
-      Profile(1, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
-    )(items)
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+    ))
   }
 
 
@@ -89,16 +115,17 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(List(
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
-      Profile(1, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
-    )(items)
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+    ))
   }
-
 
 
   it should "call ERFlowLauncher batch-V2-join" in {
@@ -118,16 +145,17 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(List(
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "0.8333333333333334"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
-      Profile(1, mutable.MutableList(
-        KeyValue("Similarity", "1.0E-6"), KeyValue("P1-ID", "TCN001278"),
-        KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
-    )(items)
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "0.8333333333333334"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0E-5"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+    ))
   }
-
 
   it should "call ERFlowLauncher SSJoin v2" in {
     var flowArgs = Array[String]()
@@ -160,16 +188,20 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(
-      List(
-        Profile(0, mutable.MutableList(
-          KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
-          KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1001"), KeyValue("P2-p_name", "FinTechETF")), "", 0),
-        Profile(1, mutable.MutableList(
-          KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
-          KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1006"), KeyValue("P2-p_name", "FunStock")), "", 0)
-      )
-    )(items)
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"),
+        KeyValue("P1-system_id", "CTENCGG"), KeyValue("P2-ID", "PG10091"), KeyValue("P2-p_name", "TECF1")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
+        KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1001"), KeyValue("P2-p_name", "FinTechETF")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
+        KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1006"), KeyValue("P2-p_name", "FunStock")), "", 0)
+    )
+    ))
   }
 
 
@@ -190,32 +222,38 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs :+= "dataSet2-attrSet=" + "p_id,system_id"
     flowArgs :+= "dataSet2-filterSize=1"
     flowArgs :+= "dataSet2-filter0=type:fund"
-    flowArgs :+= "dataSet2-additionalAttrSet=p_name"
-    flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
+    flowArgs :+= "dataSet2-additionalAttrSet=p_name,system_id"
+    flowArgs :+= "joinFieldsWeight=0.7,0.3"
+    flowArgs :+= "optionSize=3"
+    flowArgs :+= "option0=q:2"
+    flowArgs :+= "option1=threshold:0" //0,1,2
+    flowArgs :+= "option2=algorithm:EDJoin"
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_join2"
+    flowArgs :+= "joinResultFile=" + "tp_joinv2_2"
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join2.csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_joinv2_2.csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(
-      List(
-        Profile(0, mutable.MutableList(
-          KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
-          KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1001"), KeyValue("P2-p_name", "FinTechETF")), "", 0),
-        Profile(1, mutable.MutableList(
-          KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
-          KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1006"), KeyValue("P2-p_name", "FunStock")), "", 0)
-      )
-    )(items)
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P1-system_id", "CTENCGG"), KeyValue("P2-ID", "PG10091"), KeyValue("P2-p_name", "TECF1"), KeyValue("P2-system_id", "CTENCGG")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "0.3"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P1-system_id", "CTENCGG"), KeyValue("P2-ID", "PB2004"), KeyValue("P2-p_name", "SMETF"), KeyValue("P2-system_id", "CTENCGG")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "0.3"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P1-system_id", "CTENCGG"), KeyValue("P2-ID", "PG10101"), KeyValue("P2-p_name", "TECF2"), KeyValue("P2-system_id", "CTENCGG")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "0.3"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P1-system_id", "CTENCGG"), KeyValue("P2-ID", "PU1001"), KeyValue("P2-p_name", "FinTechETF"), KeyValue("P2-system_id", "CTENCGG")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "0.3"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P1-system_id", "CTENCGG"), KeyValue("P2-ID", "PE1003"), KeyValue("P2-p_name", "BCTech"), KeyValue("P2-system_id", "CTENCGG")), "", 0)
+    )))
   }
-
 
   private def prepareDSConf() = {
     var flowArgs: Array[String] = Array()

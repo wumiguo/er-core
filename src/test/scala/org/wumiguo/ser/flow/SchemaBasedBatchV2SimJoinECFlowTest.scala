@@ -3,7 +3,7 @@ package org.wumiguo.ser.flow
 import org.apache.spark.rdd.RDD
 import org.scalatest.flatspec.AnyFlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
-import org.wumiguo.ser.flow.SchemaBasedBatchV2SimJoinECFlow.doJoin
+import org.wumiguo.ser.flow.SchemaBasedBatchV2SimJoinECFlow.{doJoin, filterConnectedCluster}
 import org.wumiguo.ser.flow.configuration.FlowOptions
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
@@ -92,7 +92,26 @@ class SchemaBasedBatchV2SimJoinECFlowTest extends AnyFlatSpec with SparkEnvSetup
     ))(clusters.collect.toList)
     val weightedClusters = ConnectedComponentsClustering.linkWeightedCluster(profiles, matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), 0, 0.0)
     assertResult(List(
-      (0, (Set(2, 26, 25, 1), Map((26, 1) -> 1.0E-6, (26, 25) -> 1.0E-6, (25, 1) -> 0.9666666666666668, (2, 1) -> 0.9666666666666668, (2, 26) -> 0.16666666666666669, (2, 25) -> 0.8)))
+      (0, (Set(2, 26, 25, 1), Map((26, 1) -> 1.0E-5, (26, 25) -> 1.0E-5, (25, 1) -> 0.9666666666666668, (2, 1) -> 0.9666666666666668, (2, 26) -> 0.16666666666666669, (2, 25) -> 0.8)))
     ))(weightedClusters.collect.toList)
+  }
+
+  it should "filterConnectedCluster" in {
+    val clusters = spark.sparkContext.makeRDD(Seq(
+      (0, (Set(1, 2, 4), Map(1 -> 2 -> 0.5, 2 -> 4 -> 0.6))),
+      (1, (Set(3, 5), Map(3 -> 5 -> 0.8))),
+      (2, (Set(7, 9), Map(7 -> 9 -> 0.08)))
+    ))
+    var result = filterConnectedCluster(clusters, 0.1).collect.toList
+    assertResult(List(
+      (1, 2, 0.5), (2, 4, 0.6),
+      (3, 5, 0.8)
+    ))(result)
+    result = filterConnectedCluster(clusters, 1.0E-5).collect.toList
+    assertResult(List(
+      (1, 2, 0.5), (1, 4, 1.0E-4), (2, 4, 0.6),
+      (3, 5, 0.8),
+      (7, 9, 0.08)
+    ))(result)
   }
 }

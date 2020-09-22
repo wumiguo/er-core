@@ -86,23 +86,8 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     log.info("[SSJoin] Number of clusters " + cn)
     log.info("[SSJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
     log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
-    val innerCThreshold = flowOptions.getOrElse("relativeLinkageThreshold", "0.0").toDouble
-    val matchedPairs = clusters.map(_._2).flatMap { case (ids, map) => {
-      val pairs = new ArrayBuffer[(Int, Int, Double)]()
-      val idArray = ids.toArray
-      for (i <- 0 until idArray.length) {
-        val target: Int = idArray(i)
-        for (j <- i + 1 until idArray.length) {
-          val source = idArray(j)
-          val score = map.getOrElse((target, source), map.getOrElse((source, target), 10E-6))
-          if (score >= innerCThreshold) {
-            pairs += ((target, source, score))
-          }
-        }
-      }
-      pairs
-    }
-    }
+    val connectedLinkageThreshold = flowOptions.getOrElse("relativeLinkageThreshold", "0.0").toDouble
+    val matchedPairs: RDD[(Int, Int, Double)] = filterConnectedCluster(clusters, connectedLinkageThreshold)
     if (!matchedPairs.isEmpty()) {
       matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
       matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
@@ -115,6 +100,26 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
+  }
+
+  def filterConnectedCluster(clusters: RDD[(Int, (Set[Int], Map[(Int, Int), Double]))], connectedLinkageThreshold: Double): RDD[(Int, Int, Double)] = {
+    val matchedPairs = clusters.map(_._2).flatMap { case (ids, map) => {
+      val pairs = new ArrayBuffer[(Int, Int, Double)]()
+      val idArray = ids.toArray
+      for (i <- 0 until idArray.length) {
+        val target: Int = idArray(i)
+        for (j <- i + 1 until idArray.length) {
+          val source = idArray(j)
+          val score = map.getOrElse((target, source), map.getOrElse((source, target), 10E-5))
+          if (score >= connectedLinkageThreshold) {
+            pairs += ((target, source, score))
+          }
+        }
+      }
+      pairs
+    }
+    }
+    matchedPairs
   }
 
   def doJoin(flowOptions: Map[String, String], attributeArrayPair: (RDD[(Int, Array[String])], RDD[(Int, Array[String])]),

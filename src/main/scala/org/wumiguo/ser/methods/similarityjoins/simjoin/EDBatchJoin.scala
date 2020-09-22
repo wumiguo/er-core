@@ -399,13 +399,14 @@ object EDBatchJoin {
     val candidates = getCandidates(documents, qgramLength, threshold)
 
     val t2 = Calendar.getInstance().getTimeInMillis
+    //can pass length from outside instead of reading first item
     val attrLength = if (documents.isEmpty) {
       0
     } else {
       documents.first()._2.size
     }
 
-    val m = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => {
+    val matchesWithSimilarity = candidates.map { case (attrId, ((d1Id, d1), (d2Id, d2))) => {
       (attrId, (d1Id, d1), (d2Id, d2), CommonEdFunctions.editDist(d1, d2), Math.max(d1.length, d2.length))
     }
     }
@@ -420,19 +421,19 @@ object EDBatchJoin {
           }
         }
       }
-    m.persist(StorageLevel.MEMORY_AND_DISK)
-    val nm = m.count()
+    matchesWithSimilarity.persist(StorageLevel.MEMORY_AND_DISK)
+    val nm = matchesWithSimilarity.count()
     val t3 = Calendar.getInstance().getTimeInMillis
     log.info("[EDJoin] Num matches " + nm)
     log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
     log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
-    val aggr = m.groupBy(x => (x._2, x._3)).map {
+    val accumulatedResult = matchesWithSimilarity.groupBy(x => (x._2, x._3)).map {
       case ((p1, p2), detail) => {
         val res = detail.map(x => (x._2, x._3, x._4)).reduce((x, y) => (x._1, x._2, x._3 + y._3))
         res
       }
     }
-    aggr
+    accumulatedResult
   }
 
 }
