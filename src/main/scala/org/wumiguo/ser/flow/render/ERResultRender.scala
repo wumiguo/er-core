@@ -376,7 +376,7 @@ object ERResultRender extends Serializable{
   }
 
 
-  private def resolveColumns(moreAttr1s: Array[String], moreAttr2s: Array[String], showSimilarity: Boolean = false) = {
+  private def resolveColumns(moreAttr1s: Seq[String], moreAttr2s: Seq[String], showSimilarity: Boolean = false) = {
     var columnNames = Seq[String]()
     if (showSimilarity) {
       columnNames :+= "Similarity"

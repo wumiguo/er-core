@@ -14,13 +14,12 @@ object CommandLineConfigLoader {
     def splitAttr(attrs: String) = if (attrs == "") Array[String]() else attrs.split(",")
 
     val path = getParameter(args, dataSetPrefix, "")
-    val format = getParameter(args, dataSetPrefix + "-format", "json")
     val idField = getParameter(args, dataSetPrefix + "-id", "")
     val attrs = getParameter(args, dataSetPrefix + "-attrSet", "")
     val joinAttrs = splitAttr(attrs)
     val moreAttrsToExtract = getParameter(args, dataSetPrefix + "-additionalAttrSet", "")
     val moreAttrs = splitAttr(moreAttrsToExtract)
     val filterOptions = FilterOptions.getOptions(dataSetPrefix, args).toArray
-    DataSetConfiguration(path, format, idField, joinAttrs, moreAttrs, filterOptions)
+    DataSetConfiguration(path, idField, joinAttrs, moreAttrs, filterOptions)
   }
 }

@@ -13,15 +13,13 @@ import scala.collection.mutable
  */
 case class DataSetConfiguration(
                                  @BeanProperty var path: String,
-                                 @BeanProperty var format: String,
                                  @BeanProperty var idField: String,
-                                 @BeanProperty var joinAttrs: Array[String] = Array(),
-                                 @BeanProperty var additionalAttrs: Array[String] = Array(),
-                                 @BeanProperty var filterOptions: Array[KeyValue] = Array()
+                                 @BeanProperty var joinAttrs: Seq[String] = Seq(),
+                                 @BeanProperty var additionalAttrs: Seq[String] = Seq(),
+                                 @BeanProperty var filterOptions: Seq[KeyValue] = Seq()
                                ) {
   override def toString: String = s"DataSetConfiguration(path: $path," +
     s" idField: $idField," +
-    s" format: $format," +
     s" joinAttrs: ${joinAttrs.toList}," +
     s" filterOptions: ${filterOptions.toList}," +
     s" additionalAttrs: ${additionalAttrs.toList}" +

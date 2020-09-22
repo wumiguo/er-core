@@ -38,8 +38,8 @@ trait SimJoinCommonTrait {
   def collectAttributesPairFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration):
   (RDD[(Int, Array[String])], RDD[(Int, Array[String])]) = {
     log.info("dataSet1Attr=" + dataSet1.joinAttrs.toList + " vs dataSet2Attr=" + dataSet2.joinAttrs.toList)
-    val attributes1 = CommonFunctions.extractFieldArray(profiles1, dataSet1.joinAttrs)
-    val attributes2 = CommonFunctions.extractFieldArray(profiles2, dataSet2.joinAttrs)
+    val attributes1 = CommonFunctions.extractFieldArray(profiles1, dataSet1.joinAttrs.toArray)
+    val attributes2 = CommonFunctions.extractFieldArray(profiles2, dataSet2.joinAttrs.toArray)
     if (!attributes1.isEmpty()) {
       attributes1.take(3).foreach(x => log.info("dataSet1=" + x._1 + " " + x._2.toSeq))
     }
