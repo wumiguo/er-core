@@ -21,14 +21,14 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "fail to transform" in {
     val csvFile = "acmProfiles.10.csv"
     val dataFile = TestDirs.resolveDataPath("csv/" + csvFile)
-    val joinResultFile = "acmP10_txf"
+    val outputResultFile = "acmP10_txf"
     val outputPath = TestDirs.resolveOutputPath("parquet")
     val outputType = "parquet"
     log.info("data file {}", dataFile)
     var hasError = false
     try {
       val finalOutputPath = transform(dataFile,
-        toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+        toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
         filteredFields = Nil, overwriteOnExist = true)
       assert(false, "Do expect to run here")
     }
@@ -43,12 +43,12 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "transform" in {
     val csvFile = "acmProfiles.h.15.v2.csv"
     val dataFile = TestDirs.resolveDataPath("csv/" + csvFile)
-    val joinResultFile = "acmP15_v2_txf"
+    val outputResultFile = "acmP15_v2_txf"
     val outputPath = TestDirs.resolveOutputPath("parquet")
     val outputType = "parquet"
     log.info("data file {}", dataFile)
     val finalOutputPath = transform(dataFile,
-      toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+      toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
       filteredFields = Nil, overwriteOnExist = true)
     assert(finalOutputPath != null)
     val outRdd = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(finalOutputPath))
@@ -59,12 +59,12 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "transform csv to parquet" in {
     val csvFile = "dt01.csv"
     val dataFile = TestDirs.resolveTestResourcePath("data/e2e/" + csvFile)
-    val joinResultFile = "c2p_txf"
+    val outputResultFile = "c2p_txf"
     val outputPath = TestDirs.resolveOutputPath("parquet")
     val outputType = "parquet"
     val idField = "t_id"
     val finalOutputPath = transform(dataFile,
-      toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+      toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
       idField = idField, filteredFields = Nil, overwriteOnExist = true)
     assertResult(outputPath + "/c2p_txf.parquet")(finalOutputPath)
     val outRdd = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(finalOutputPath))
@@ -81,12 +81,12 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "transform csv to parquet and keep id" in {
     val csvFile = "dt01.csv"
     val dataFile = TestDirs.resolveTestResourcePath("data/e2e/" + csvFile)
-    val joinResultFile = "c2p_id_txf"
+    val outputResultFile = "c2p_id_txf"
     val outputPath = TestDirs.resolveOutputPath("parquet")
     val outputType = "parquet"
     val idField = "t_id"
     val finalOutputPath = transform(dataFile,
-      toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+      toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
       idField = idField, filteredFields = Nil, overwriteOnExist = true)
     assertResult(outputPath + "/c2p_id_txf.parquet")(finalOutputPath)
     val outRdd = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(finalOutputPath))
@@ -103,13 +103,13 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "transform csv to parquet partially" in {
     val csvFile = "dt01.csv"
     val dataFile = TestDirs.resolveTestResourcePath("data/e2e/" + csvFile)
-    val joinResultFile = "dt_filtered_txf"
+    val outputResultFile = "dt_filtered_txf"
     val outputPath = TestDirs.resolveOutputPath("parquet")
     val outputType = "parquet"
     val idField = "t_id"
     val fields = List("t_id", "t_amount")
     val finalOutputPath = transform(dataFile,
-      toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+      toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
       idField = idField, filteredFields = fields, overwriteOnExist = true)
     assertResult(outputPath + "/dt_filtered_txf.parquet")(finalOutputPath)
     val outRdd = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(finalOutputPath))
@@ -128,13 +128,13 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "transform parquet1 to csv" in {
     val csvFile = "dt01.parquet"
     val dataFile = TestDirs.resolveTestResourcePath("data/e2e/" + csvFile)
-    val joinResultFile = "p2c_txf"
+    val outputResultFile = "p2c_txf"
     //val outputPath = "/Users/mac/Development/learn/er-spark/output/e2e/"
     val outputPath = TestDirs.resolveOutputPath("csv")
     val outputType = "csv"
     val idField = "t_id"
     val finalOutputPath = transform(dataFile,
-      toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+      toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
       idField = idField, filteredFields = Nil, overwriteOnExist = true)
     assertResult(outputPath + "/p2c_txf.csv")(finalOutputPath)
     val outRdd = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(finalOutputPath))
@@ -151,13 +151,13 @@ class GenericDataTransformerTest extends AnyFlatSpec with SparkEnvSetup {
   it should "transform parquet2 to csv" in {
     val csvFile = "dt01_c2p_txf.parquet"
     val dataFile = TestDirs.resolveTestResourcePath("data/e2e/" + csvFile)
-    val joinResultFile = "p2c2_txf"
+    val outputResultFile = "p2c2_txf"
     //val outputPath = "/Users/mac/Development/learn/er-spark/output/e2e/"
     val outputPath = TestDirs.resolveOutputPath("csv")
     val outputType = "csv"
     val idField = "t_id"
     val finalOutputPath = transform(dataFile,
-      toFolder = outputPath, toFileName = joinResultFile, toType = outputType,
+      toFolder = outputPath, toFileName = outputResultFile, toType = outputType,
       idField = idField, filteredFields = Nil, overwriteOnExist = true)
     assertResult(outputPath + "/p2c2_txf.csv")(finalOutputPath)
     val outRdd = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(finalOutputPath))

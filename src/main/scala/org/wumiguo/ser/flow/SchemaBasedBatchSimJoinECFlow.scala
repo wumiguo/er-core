@@ -13,7 +13,7 @@ import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
 import org.wumiguo.ser.methods.similarityjoins.simjoin.{EDBatchJoin, EDBatchSimpleJoin, EDJoin, PartEnum}
 import org.wumiguo.ser.methods.util.CommandLineUtil
-import org.wumiguo.ser.methods.util.PrintContext.printSparkContext
+import org.wumiguo.ser.methods.util.PrintContext.printSession
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -30,7 +30,7 @@ object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJ
   override def run(args: Array[String]): Unit = {
     val sparkConf = SparkAppConfigurationSupport.args2SparkConf(args)
     val spark = createSparkSession(getClass.getName, appConf = sparkConf)
-    printSparkContext(spark)
+    printSession(spark)
     val dataSet1 = CommandLineConfigLoader.load(args, "dataSet1")
     val dataSet2 = CommandLineConfigLoader.load(args, "dataSet2")
 

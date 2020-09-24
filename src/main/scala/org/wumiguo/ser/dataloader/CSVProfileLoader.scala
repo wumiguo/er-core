@@ -55,7 +55,7 @@ object CSVProfileLoader extends ProfileLoaderTrait {
                               keepRealID: Boolean = false, filter: FieldFilter = DummyFieldFilter, fieldValuesScope: List[KeyValue] = Nil
                              ): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
-    PrintContext.printSparkContext(sparkSession)
+    PrintContext.printSession(sparkSession)
     val df = sparkSession.read.option("header", header).option("sep", separator).option("delimiter", "\"").csv(filePath)
     val columnNames = df.columns
     val lcRealIDField = realIDField.toLowerCase

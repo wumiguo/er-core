@@ -14,7 +14,7 @@ object ParquetWrapper extends WrapperTrait {
 
   def loadProfiles2(filePath: String, startIDFrom: Int = 0, separator: String = ",", realIDField: String = "-1", sourceId: Int = 0): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
-    PrintContext.printSparkContext(sparkSession)
+    PrintContext.printSession(sparkSession)
     val df = sparkSession.read.parquet(filePath)
 
     df.rdd.zipWithIndex().map { case (row, id) =>

@@ -26,7 +26,7 @@ object ParquetProfileLoader extends ProfileLoaderTrait {
                               keepRealID: Boolean = false, explodeInnerFields: Boolean = false, innerSeparator: String = ",",
                               filter: FieldFilter = DummyFieldFilter, fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
-    PrintContext.printSparkContext(sparkSession)
+    PrintContext.printSession(sparkSession)
     val df = sparkSession.read.parquet(filePath)
     val columnNames = df.schema.fields.map(_.name)
     val lcRealIDField = realIDField.toLowerCase

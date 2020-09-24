@@ -11,10 +11,10 @@ import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
 object PrintContext {
 
   def printSparkContext() = {
-    printSparkContext(SparkSession.builder().getOrCreate())
+    printSession(SparkSession.builder().getOrCreate())
   }
 
-  def printSparkContext(spark: SparkSession) = {
+  def printSession(spark: SparkSession) = {
     log.info("-pc-sparkContext master=" + spark.sparkContext.master)
     log.info("-pc-sparkContext user=" + spark.sparkContext.sparkUser)
     log.info("-pc-sparkContext startTime=" + spark.sparkContext.startTime)
