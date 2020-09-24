@@ -5,6 +5,7 @@ import org.apache.spark.sql.SparkSession
 import org.wumiguo.ser.dataloader.filter.{DummyFieldFilter, FieldFilter}
 import org.wumiguo.ser.methods.datastructure
 import org.wumiguo.ser.methods.datastructure.{KeyValue, MatchingEntities, Profile}
+import org.wumiguo.ser.methods.util.PrintContext
 
 /**
  * @author levinliu
@@ -54,6 +55,7 @@ object CSVProfileLoader extends ProfileLoaderTrait {
                               keepRealID: Boolean = false, filter: FieldFilter = DummyFieldFilter, fieldValuesScope: List[KeyValue] = Nil
                              ): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
+    PrintContext.printSparkContext(sparkSession)
     val df = sparkSession.read.option("header", header).option("sep", separator).option("delimiter", "\"").csv(filePath)
     val columnNames = df.columns
     val lcRealIDField = realIDField.toLowerCase

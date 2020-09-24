@@ -5,8 +5,9 @@ import java.util.{Calendar, UUID}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import org.wumiguo.ser.common.SparkEnvSetup
+import org.wumiguo.ser.common.{SparkAppConfigurationSupport, SparkEnvSetup}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
+import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlowDebugMode.getClass
 import org.wumiguo.ser.flow.configuration.{CommandLineConfigLoader, FlowOptions}
 import org.wumiguo.ser.flow.render.ERResultRender
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}
@@ -30,9 +31,11 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup with S
   private val ALGORITHM_PARTENUM = "PartEnum"
 
   override def run(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().getOrCreate()
-    printSparkContext()
-    val dataSet1 = CommandLineConfigLoader.load(args, "dataSet1")
+
+    val sparkConf = SparkAppConfigurationSupport.args2SparkConf(args)
+    val spark = createSparkSession(getClass.getName, appConf = sparkConf)
+    printSparkContext(spark)
+     val dataSet1 = CommandLineConfigLoader.load(args, "dataSet1")
     val dataSet2 = CommandLineConfigLoader.load(args, "dataSet2")
 
     val outputPath = CommandLineUtil.getParameter(args, "outputPath", "output/mapping")
