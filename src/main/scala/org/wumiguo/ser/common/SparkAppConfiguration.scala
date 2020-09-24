@@ -13,6 +13,20 @@ class SparkAppConfiguration {
   @BeanProperty var enableHiveSupport: Boolean = false
   @BeanProperty var options: mutable.Map[String, String] = mutable.Map()
 
+  def conf2Args(): Array[String] = {
+    var args = Array[String]()
+    args :+= "spark-master=" + master
+    args :+= "spark-enableHiveSupport=" + enableHiveSupport
+    args :+= "spark-optionSize=" + options.size
+    var i = 0
+    for (opt <- options) {
+      args :+= "spark-option" + i + "=" + opt._1 + ":" + opt._2
+      i += 1
+    }
+    args
+  }
+
+
   override def toString: String = s"SparkAppConfiguration(master: $master, enableHiveSupport: $enableHiveSupport," +
     s" options: $options)"
 

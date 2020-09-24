@@ -21,7 +21,6 @@ object ERResultRender extends Serializable{
                    matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int,Double)],
                    showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
-    val spark = SparkSession.builder().getOrCreate()
     if (showSimilarity) {
       log.info("matchedPairsWithSimilarityCount=" + matchedPairs.count())
       val profileMatches2 = mapMatchesWithProfilesAndSimilarity(matchedPairs, profiles, secondEPStartID)
@@ -37,7 +36,7 @@ object ERResultRender extends Serializable{
         fieldValuesScope = p1IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val p2IDFilterOption = finalMap2.map(x => KeyValue(dataSet2.idField, x._2)).toLocalIterator.toList
       val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.idField,
         startIDFrom = 0, sourceId = 1, keepRealID = dataSet2.includeRealID, fieldsToKeep = dataSet2.additionalAttrs.toList,
@@ -52,7 +51,7 @@ object ERResultRender extends Serializable{
       }
       log.info("fp1count=" + finalProfiles1.count())
       log.info("fp2count=" + finalProfiles2.count())
-      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
       val rows = finalMap2.map(x => {
         var entry = Seq[String]()
@@ -92,7 +91,7 @@ object ERResultRender extends Serializable{
         fieldValuesScope = p1IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val p2IDFilterOption = finalMap.map(x => KeyValue(dataSet2.idField, x._2)).toLocalIterator.toList
       val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.idField,
         startIDFrom = 0, sourceId = 0, keepRealID = dataSet2.includeRealID, fieldsToKeep = dataSet2.additionalAttrs.toList,
@@ -107,7 +106,7 @@ object ERResultRender extends Serializable{
       }
       log.info("fp1count=" + finalProfiles1.count())
       log.info("fp2count=" + finalProfiles2.count())
-      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
       val rows = finalMap.map(x => {
         var entry = Seq[String]()
@@ -128,8 +127,7 @@ object ERResultRender extends Serializable{
                    matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
                    showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
-    val spark = SparkSession.builder().getOrCreate()
-    if (showSimilarity) {
+     if (showSimilarity) {
       val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
       log.info("matchedPairsWithSimilarityCount=" + matchedPairsWithSimilarity.count())
       val profileMatches2 = mapMatchesWithProfilesAndSimilarity(matchedPairsWithSimilarity, profiles, secondEPStartID)
@@ -145,7 +143,7 @@ object ERResultRender extends Serializable{
         fieldValuesScope = p1IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val p2IDFilterOption = finalMap2.map(x => KeyValue(dataSet2.idField, x._2)).toLocalIterator.toList
       val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.idField,
         startIDFrom = 0, sourceId = 1, keepRealID = dataSet2.includeRealID, fieldsToKeep = dataSet2.additionalAttrs.toList,
@@ -160,7 +158,7 @@ object ERResultRender extends Serializable{
       }
       log.info("fp1count=" + finalProfiles1.count())
       log.info("fp2count=" + finalProfiles2.count())
-      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
       val rows = finalMap2.map(x => {
         var entry = Seq[String]()
@@ -200,7 +198,7 @@ object ERResultRender extends Serializable{
         fieldValuesScope = p1IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val p2IDFilterOption = finalMap.map(x => KeyValue(dataSet2.idField, x._2)).toLocalIterator.toList
       val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.idField,
         startIDFrom = 0, sourceId = 0, keepRealID = dataSet2.includeRealID, fieldsToKeep = dataSet2.additionalAttrs.toList,
@@ -215,7 +213,7 @@ object ERResultRender extends Serializable{
       }
       log.info("fp1count=" + finalProfiles1.count())
       log.info("fp2count=" + finalProfiles2.count())
-      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
       val rows = finalMap.map(x => {
         var entry = Seq[String]()
@@ -237,7 +235,6 @@ object ERResultRender extends Serializable{
                    matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
                    showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
-    val spark = SparkSession.builder().getOrCreate()
     if (showSimilarity) {
       val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
       log.info("matchedPairsWithSimilarityCount=" + matchedPairsWithSimilarity.count())
@@ -254,7 +251,7 @@ object ERResultRender extends Serializable{
         fieldValuesScope = p1IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val p2IDFilterOption = finalMap2.map(x => KeyValue(dataSet2IdField, x._2)).toLocalIterator.toList
       val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.dataSetId,
         startIDFrom = 0, sourceId = 1, keepRealID = keepReadID2, fieldsToKeep = moreAttr2s.toList,
@@ -269,7 +266,7 @@ object ERResultRender extends Serializable{
       }
       log.info("fp1count=" + finalProfiles1.count())
       log.info("fp2count=" + finalProfiles2.count())
-      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(moreAttr1s, moreAttr2s, showSimilarity)
       val rows = finalMap2.map(x => {
         var entry = Seq[String]()
@@ -309,7 +306,7 @@ object ERResultRender extends Serializable{
         fieldValuesScope = p1IDFilterOption,
         filter = SpecificFieldValueFilter
       )
-      val p1B = spark.sparkContext.broadcast(finalProfiles1.collect())
+      val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val p2IDFilterOption = finalMap.map(x => KeyValue(dataSet2IdField, x._2)).toLocalIterator.toList
       val finalProfiles2 = getProfileLoader(dataSet2.path).load(dataSet2.path, realIDField = dataSet2.dataSetId,
         startIDFrom = 0, sourceId = 0, keepRealID = keepReadID2, fieldsToKeep = moreAttr2s.toList,
@@ -324,7 +321,7 @@ object ERResultRender extends Serializable{
       }
       log.info("fp1count=" + finalProfiles1.count())
       log.info("fp2count=" + finalProfiles2.count())
-      val p2B = spark.sparkContext.broadcast(finalProfiles2.collect())
+      val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       val columnNames: Seq[String] = resolveColumns(moreAttr1s, moreAttr2s, showSimilarity)
       val rows = finalMap.map(x => {
         var entry = Seq[String]()
