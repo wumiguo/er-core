@@ -18,7 +18,8 @@ import scala.collection.mutable.ArrayBuffer
  */
 trait SimJoinCommonTrait {
 
-  def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration): ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
+  def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration):
+  ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
     var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
     log.info("dataSet1Attr=" + dataSet1.joinAttrs.toList + " vs dataSet2Attr=" + dataSet2.joinAttrs.toList)
     for (i <- 0 until dataSet1.joinAttrs.length) {
@@ -47,22 +48,6 @@ trait SimJoinCommonTrait {
       attributes2.take(3).foreach(x => log.info("dataSet2=" + x._1 + " " + x._2.toSeq))
     }
     val attributesArray = (attributes1, attributes2)
-    attributesArray
-  }
-
-  def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfig, dataSet2: DataSetConfig): ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
-    var attributesArray = new ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])]()
-    log.info("dataSet1Attr=" + dataSet1.attributes.toList + " vs dataSet2Attr=" + dataSet2.attributes.toList)
-    for (i <- 0 until dataSet1.attributes.length) {
-      val attributes1 = CommonFunctions.extractField(profiles1, dataSet1.attributes(i))
-      val attributes2 = Option(dataSet2.attributes).map(x => CommonFunctions.extractField(profiles2, x(i))).orNull
-      attributesArray :+= ((attributes1, attributes2))
-    }
-    log.info("attrsArrayLength=" + attributesArray.length)
-    if (attributesArray.length > 0) {
-      log.info("attrsArrayHead _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
-      log.info("attrsArrayHead _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
-    }
     attributesArray
   }
 
@@ -132,23 +117,6 @@ trait SimJoinCommonTrait {
       sourceId = sourceId, keepRealID = dataSetConfig.includeRealID,
       fieldsToKeep = dataSetConfig.joinAttrs.toList,
       fieldValuesScope = dataSetConfig.filterOptions.toList,
-      filter = SpecificFieldValueFilter)
-    data
-  }
-
-  def loadDataWithOption(args: Array[String], dataSetPrefix: String, dataSetConfig: DataSetConfig,
-                         keepRealID: Boolean, epStartID: Int, sourceId: Int): RDD[Profile] = {
-    val options = FilterOptions.getOptions(dataSetPrefix, args)
-    log.info(dataSetPrefix + "-FilterOptions=" + options)
-    val path = dataSetConfig.path
-    val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
-    log.info("profileLoader is " + loader)
-    val data = loader.load(
-      path, realIDField = dataSetConfig.dataSetId,
-      startIDFrom = epStartID,
-      sourceId = sourceId, keepRealID = keepRealID,
-      fieldsToKeep = dataSetConfig.attributes.toList,
-      fieldValuesScope = options,
       filter = SpecificFieldValueFilter)
     data
   }

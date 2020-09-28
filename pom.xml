@@ -114,6 +114,7 @@
                             <goal>compile</goal>
                             <goal>testCompile</goal>
                         </goals>
+                        <phase>test-compile</phase>
                     </execution>
                 </executions>
                 <configuration>
@@ -163,7 +164,7 @@
                         <phase>test</phase>
                         <goals>
                             <goal>check</goal>
-                            <goal>report</goal>
+<!--                            <goal>report</goal>-->
                         </goals>
                     </execution>
                 </executions>

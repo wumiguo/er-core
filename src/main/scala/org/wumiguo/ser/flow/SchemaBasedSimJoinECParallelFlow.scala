@@ -7,7 +7,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.wumiguo.ser.common.{SparkAppConfigurationSupport, SparkEnvSetup}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
-import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlowDebugMode.getClass
 import org.wumiguo.ser.flow.configuration.{CommandLineConfigLoader, FlowOptions}
 import org.wumiguo.ser.flow.render.ERResultRender
 import org.wumiguo.ser.methods.datastructure.{Profile, WeightedEdge}

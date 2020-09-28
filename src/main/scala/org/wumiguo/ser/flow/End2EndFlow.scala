@@ -6,7 +6,6 @@ import org.wumiguo.ser.ERFlowLauncher.getClass
 import org.wumiguo.ser.common.{SparkAppConfigurationSupport, SparkEnvSetup}
 import org.wumiguo.ser.dataloader.{CSVProfileLoader, GroundTruthLoader}
 import org.wumiguo.ser.flow.End2EndFlow.log
-import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlowDebugMode.{createSparkSession, getClass}
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
 import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
 import org.wumiguo.ser.methods.datastructure.{KeysCluster, Profile}
