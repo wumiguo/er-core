@@ -8,10 +8,11 @@ import scala.collection.mutable
  *         Created on 2020/9/2
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class SparkAppConfiguration {
-  @BeanProperty var master: String = ""
-  @BeanProperty var enableHiveSupport: Boolean = false
-  @BeanProperty var options: mutable.Map[String, String] = mutable.Map()
+case class SparkAppConfiguration(
+                                  @BeanProperty var master: String = "",
+                                  @BeanProperty var enableHiveSupport: Boolean = false,
+                                  @BeanProperty var options: mutable.Map[String, String] = mutable.Map()
+                                ) {
 
   override def toString: String = s"SparkAppConfiguration(master: $master, enableHiveSupport: $enableHiveSupport," +
     s" options: $options)"

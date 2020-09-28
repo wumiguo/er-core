@@ -2,7 +2,7 @@ package org.wumiguo.ser.dataloader
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.methods.datastructure.{KeyValue, MatchingEntities, Profile}
 import org.wumiguo.ser.testutil.TestDirs
@@ -14,7 +14,7 @@ import scala.collection.mutable
  *         Created on 2020/6/20
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class WrapperTraitTest extends FlatSpec
+class WrapperTraitTest extends AnyFlatSpec
   with SparkEnvSetup {
   val spark = createLocalSparkSession(getClass.getName)
   it should "test row to attributes " in {

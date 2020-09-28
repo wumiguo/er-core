@@ -4,6 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.wumiguo.ser.dataloader.JSONWrapper.parseData
 import org.wumiguo.ser.methods.datastructure.{MatchingEntities, Profile}
+import org.wumiguo.ser.methods.util.PrintContext
 
 object ParquetWrapper extends WrapperTrait {
 
@@ -13,7 +14,7 @@ object ParquetWrapper extends WrapperTrait {
 
   def loadProfiles2(filePath: String, startIDFrom: Int = 0, separator: String = ",", realIDField: String = "-1", sourceId: Int = 0): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
-
+    PrintContext.printSession(sparkSession)
     val df = sparkSession.read.parquet(filePath)
 
     df.rdd.zipWithIndex().map { case (row, id) =>

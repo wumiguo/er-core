@@ -1,7 +1,7 @@
 package org.wumiguo.ser.methods.util
 
 import org.apache.spark.sql.SparkSession
-import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
+import org.slf4j.LoggerFactory
 
 /**
  * @author levinliu
@@ -9,16 +9,20 @@ import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 object PrintContext {
+  val log = LoggerFactory.getLogger(this.getClass.getName)
 
   def printSparkContext() = {
-    val spark = SparkSession.builder().getOrCreate()
-    log.info("-sparkContext master=" + spark.sparkContext.master)
-    log.info("-sparkContext user=" + spark.sparkContext.sparkUser)
-    log.info("-sparkContext startTime=" + spark.sparkContext.startTime)
-    log.info("-sparkContext appName=" + spark.sparkContext.appName)
-    log.info("-sparkContext applicationId=" + spark.sparkContext.applicationId)
-    log.info("-sparkContext getConf=" + spark.sparkContext.getConf)
-    log.info("-sparkContext allConf=" + spark.sparkContext.getConf.getAll.toList)
+    printSession(SparkSession.builder().getOrCreate())
+  }
+
+  def printSession(spark: SparkSession) = {
+    log.info("-pc-sparkContext master=" + spark.sparkContext.master)
+    log.info("-pc-sparkContext user=" + spark.sparkContext.sparkUser)
+    log.info("-pc-sparkContext startTime=" + spark.sparkContext.startTime)
+    log.info("-pc-sparkContext appName=" + spark.sparkContext.appName)
+    log.info("-pc-sparkContext applicationId=" + spark.sparkContext.applicationId)
+    log.info("-pc-sparkContext getConf=" + spark.sparkContext.getConf)
+    log.info("-pc-sparkContext allConf=" + spark.sparkContext.getConf.getAll.toList)
   }
 
 }

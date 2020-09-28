@@ -5,6 +5,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 import org.slf4j.LoggerFactory
 import org.wumiguo.ser.dataloader.filter.{DummyFieldFilter, FieldFilter}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
+import org.wumiguo.ser.methods.util.PrintContext
 
 object ParquetProfileLoader extends ProfileLoaderTrait {
   val log = LoggerFactory.getLogger(getClass.getName)
@@ -25,6 +26,7 @@ object ParquetProfileLoader extends ProfileLoaderTrait {
                               keepRealID: Boolean = false, explodeInnerFields: Boolean = false, innerSeparator: String = ",",
                               filter: FieldFilter = DummyFieldFilter, fieldValuesScope: List[KeyValue] = Nil): RDD[Profile] = {
     val sparkSession = SparkSession.builder().getOrCreate()
+    PrintContext.printSession(sparkSession)
     val df = sparkSession.read.parquet(filePath)
     val columnNames = df.schema.fields.map(_.name)
     val lcRealIDField = realIDField.toLowerCase

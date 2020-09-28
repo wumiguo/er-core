@@ -1,8 +1,9 @@
 package org.wumiguo.ser.flow
 
 import org.apache.spark.sql.SparkSession
-import org.wumiguo.ser.common.SparkEnvSetup
+import org.wumiguo.ser.common.{SparkAppConfigurationSupport, SparkEnvSetup}
 import org.wumiguo.ser.dataloader.{CSVProfileLoader, DataTypeResolver, GroundTruthLoader, ProfileLoaderFactory}
+import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlowDebugMode.{createSparkSession, getClass}
 import org.wumiguo.ser.methods.blockbuilding.TokenBlocking
 import org.wumiguo.ser.methods.blockrefinement.pruningmethod.CEP
 import org.wumiguo.ser.methods.blockrefinement.{BlockFiltering, BlockPurging}
@@ -23,7 +24,8 @@ object End2EndSimpleFlowSample extends ERFlow with SparkEnvSetup {
     //data reading
     val sourceId1 = 1001
     val sourceId2 = 1002
-    val spark = SparkSession.builder().getOrCreate()
+    val sparkConf = SparkAppConfigurationSupport.args2SparkConf(args)
+    val spark = createSparkSession(getClass.getName, appConf = sparkConf)
     log.info("launch full end2end flow")
     val gtPath = getClass.getClassLoader.getResource("sampledata/dblpAcmIdDuplicates.mini.gen.csv").getPath
     log.info("load ground-truth from path {}", gtPath)

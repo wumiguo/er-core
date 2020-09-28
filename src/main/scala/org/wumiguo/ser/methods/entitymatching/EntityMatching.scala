@@ -123,8 +123,6 @@ object EntityMatching {
       this.groupLinkage(p1, p2, threshold)
     }
 
-    val sc = SparkContext.getOrCreate()
-
     val profilesID = profiles.map(p => (p.id.toInt, p))
 
     // construct the RDD of the comparisons - RDD[(Profile, Array(ProfileID)]
@@ -155,7 +153,7 @@ object EntityMatching {
         .mapPartitionsWithIndex((index, it) => if (partitionGroup.contains(index)) it else Iterator(), preservesPartitioning = true)
         .collect()
       //comparisonsPart.foreach(x => println("comparisonsPart:" + x))
-      val comparisonsPartBD = sc.broadcast(comparisonsPart)
+      val comparisonsPartBD = profiles.sparkContext.broadcast(comparisonsPart)
       // perform comparisons
       val wEdges = profilesMap
         .flatMap { profilesMap1 =>
@@ -177,7 +175,7 @@ object EntityMatching {
     }
 
     // unite all the RDDs of edges
-    val matches = sc.union(edgesArrayRDD)
+    val matches = profiles.sparkContext.union(edgesArrayRDD)
       .setName("Matches")
       .persist(StorageLevel.MEMORY_AND_DISK)
     val matchesCount = matches.count()

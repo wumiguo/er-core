@@ -53,6 +53,7 @@ object GenericDataWriter {
       case "csv" => writer.csv(finalPath)
       case "json" => writer.json(finalPath)
       case "parquet" => writer.parquet(finalPath)
+      case "parq" => writer.parquet(finalPath)
       case _ => throw new RuntimeException("Given type [" + outputType.toLowerCase + "] out of support output type")
     }
     finalPath

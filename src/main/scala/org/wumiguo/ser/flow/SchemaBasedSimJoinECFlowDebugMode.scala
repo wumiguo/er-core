@@ -4,11 +4,12 @@ import java.util.Calendar
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
-import org.wumiguo.ser.common.SparkEnvSetup
+import org.wumiguo.ser.common.{SparkAppConfigurationSupport, SparkEnvSetup}
 import org.wumiguo.ser.dataloader.filter.SpecificFieldValueFilter
 import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory, ProfileLoaderTrait}
 import org.wumiguo.ser.datawriter.GenericDataWriter.generateOutputWithSchema
 import org.wumiguo.ser.entity.parameter.DataSetConfig
+import org.wumiguo.ser.flow.SchemaBasedBatchV2SimJoinECFlow.{createSparkSession, getClass}
 import org.wumiguo.ser.flow.configuration.{FilterOptions, FlowOptions}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile, WeightedEdge}
 import org.wumiguo.ser.methods.entityclustering.ConnectedComponentsClustering
@@ -29,7 +30,8 @@ object SchemaBasedSimJoinECFlowDebugMode extends ERFlow with SparkEnvSetup with 
   private val ALGORITHM_PARTENUM = "PartEnum"
 
   override def run(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().getOrCreate()
+    val sparkConf = SparkAppConfigurationSupport.args2SparkConf(args)
+    val spark = createSparkSession(getClass.getName, appConf = sparkConf)
     printContext(spark)
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)

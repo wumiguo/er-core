@@ -28,6 +28,9 @@ object GenericDataTransformer {
     log.info("first-profiles={}", first)
     var columnNames = Seq[String]()
     if (keepRealID) {
+      if (first.attributes.find(_.key == idField).isEmpty) {
+        throw new RuntimeException("Invalid id field '" + idField + "', out of scope [" + first.attributes.map(_.key).mkString(",") + "]")
+      }
       columnNames :+= idField
     }
     columnNames ++= {
