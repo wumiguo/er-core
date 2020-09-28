@@ -1,7 +1,7 @@
 package org.wumiguo.ser.methods.util
 
 import org.apache.spark.sql.SparkSession
-import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
+import org.slf4j.LoggerFactory
 
 /**
  * @author levinliu
@@ -9,6 +9,7 @@ import org.wumiguo.ser.flow.SchemaBasedSimJoinECFlow.log
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 object PrintContext {
+  val log = LoggerFactory.getLogger(this.getClass.getName)
 
   def printSparkContext() = {
     printSession(SparkSession.builder().getOrCreate())
