@@ -108,9 +108,9 @@ object ERResultRender extends Serializable {
    * @param profiles2
    * @return
    */
-  def renderResultWithoutReloadProfiles(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
-                                        matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
-                                        showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
+  def renderResultWithReloadProfiles(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
+                                     matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
+                                     showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
     if (showSimilarity) {
       val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
