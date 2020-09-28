@@ -58,8 +58,6 @@ object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJ
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
 
-    log.info("profiles1 first=" + profiles1.first())
-    log.info("profiles2 first=" + profiles2.first())
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
     val t1 = Calendar.getInstance().getTimeInMillis
