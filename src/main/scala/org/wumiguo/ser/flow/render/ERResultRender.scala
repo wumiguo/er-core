@@ -17,6 +17,18 @@ import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
 object ERResultRender extends Serializable {
   val log = LoggerFactory.getLogger(this.getClass.getName)
 
+  /**
+   * load data with post filter option + pre-filter option, which suite for the case that both filter fields and join fields are indexed
+   *
+   * @param dataSet1
+   * @param dataSet2
+   * @param secondEPStartID
+   * @param matchDetails
+   * @param profiles
+   * @param matchedPairs
+   * @param showSimilarity
+   * @return
+   */
   def renderResultV2(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
                      matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int, Double)],
                      showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
@@ -81,6 +93,72 @@ object ERResultRender extends Serializable {
     unpersist(p1B, p2B)
     rows
   }
+
+  /**
+   * When the joint fields dont have index, suggest to use this render method to continue with profiles in memory
+   *
+   * @param dataSet1
+   * @param dataSet2
+   * @param secondEPStartID
+   * @param matchDetails
+   * @param profiles
+   * @param matchedPairs
+   * @param showSimilarity
+   * @param profiles1
+   * @param profiles2
+   * @return
+   */
+  def renderResultWithoutReloadProfiles(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
+                                        matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
+                                        showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
+    log.info("showSimilarity=" + showSimilarity)
+    if (showSimilarity) {
+      val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
+      log.info("matchedPairsWithSimilarityCount=" + matchedPairsWithSimilarity.count())
+      val profileMatches2 = mapMatchesWithProfilesAndSimilarity(matchedPairsWithSimilarity, profiles, secondEPStartID)
+      log.info("profileMatchesCount=" + profileMatches2.count())
+      val matchesInDiffDataSet2 = profileMatches2.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+      log.info("matchesInDiffDataSet2 size =" + matchesInDiffDataSet2.count())
+      val profilePairMap = matchesInDiffDataSet2.map(x => (x._1._1.originalID, x._1._2.originalID, x._1._3))
+      log.info("profilePairMap size =" + profilePairMap.count())
+      val trimDownProfiles1 = profiles1.map(x =>
+        Profile(x.id, x.attributes.filter(y => y.key == dataSet1.idField || dataSet1.additionalAttrs.contains(y.key)), x.originalID, x.sourceId))
+      val trimDownProfiles2 = profiles2.map(x =>
+        Profile(x.id, x.attributes.filter(y => y.key == dataSet2.idField || dataSet2.additionalAttrs.contains(y.key)), x.originalID, x.sourceId))
+      val p1B = matchDetails.sparkContext.broadcast(trimDownProfiles1.collect())
+      val p2B = matchDetails.sparkContext.broadcast(trimDownProfiles2.collect())
+      val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
+      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, dataSet1, dataSet2, p1B, p2B)
+      (columnNames, rows)
+    } else {
+      val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles, secondEPStartID)
+      if (!profileMatches.isEmpty()) {
+        profileMatches.take(3).foreach(x => log.info("profileMatches=" + x))
+      }
+      log.info("profileMatchesCount=" + profileMatches.count())
+      val matchesInDiffDataSet = profileMatches.filter(t => t._1.sourceId != t._2.sourceId).zipWithIndex()
+      log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
+      if (!matchesInDiffDataSet.isEmpty()) {
+        matchesInDiffDataSet.take(3).foreach(t => {
+          log.info("matches-pair=" +
+            (t._2, (t._1._1.originalID, t._1._1.sourceId), (t._1._2.originalID, t._1._2.sourceId)))
+        })
+      }
+      log.info("matchesInDiffDataSet1 size =" + matchesInDiffDataSet.count())
+      val profilePairMap = matchesInDiffDataSet.map(x => (x._1._1.originalID, x._1._2.originalID))
+      log.info("profilePairMap size =" + profilePairMap.count())
+      val trimDownProfiles1 = profiles1.map(x =>
+        Profile(x.id, x.attributes.filter(y => y.key == dataSet1.idField || dataSet1.additionalAttrs.contains(y.key)), x.originalID, x.sourceId))
+      val trimDownProfiles2 = profiles2.map(x =>
+        Profile(x.id, x.attributes.filter(y => y.key == dataSet2.idField || dataSet2.additionalAttrs.contains(y.key)), x.originalID, x.sourceId))
+      val p1B = matchDetails.sparkContext.broadcast(trimDownProfiles1.collect())
+      val p2B = matchDetails.sparkContext.broadcast(trimDownProfiles2.collect())
+      val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
+      val rows: RDD[Row] = resolveRowsWithoutSimilarity(profilePairMap, dataSet1, dataSet2, p1B, p2B)
+      (columnNames, rows)
+    }
+  }
+
 
   def renderResult(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
                    matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],

@@ -1,7 +1,7 @@
 package org.wumiguo.ser
 
 import org.slf4j.LoggerFactory
-import org.wumiguo.ser.flow.{ERFlow, End2EndSimpleFlow, End2EndSimpleFlowSample, SchemaBasedBatchSimJoinECFlow, SchemaBasedBatchV2SimJoinECFlow, SchemaBasedSimJoinECFlow, SchemaBasedSimJoinECFlowSample, SchemaBasedSimJoinECParallelFlow}
+import org.wumiguo.ser.flow.{ERFlow, End2EndSimpleFlow, End2EndSimpleFlowSample, SchemaBasedBatchSimJoinECFlow, SchemaBasedBatchV2SimJoinECFlow, SchemaBasedSimJoinECFlow, SchemaBasedSimJoinECFlowSample, SchemaBasedSimJoinECParallelFlow, SchemaBasedSimJoinECPreloadFlow}
 import org.wumiguo.ser.methods.util.CommandLineUtil
 import org.wumiguo.ser.methods.util.CommandLineUtil.getParameter
 
@@ -20,7 +20,8 @@ object ERFlowLauncher {
       case "End2End" => End2EndSimpleFlow
       case "End2EndSample" => End2EndSimpleFlowSample
       case "SSJoinSample" => SchemaBasedSimJoinECFlowSample
-      case "SSJoin" => SchemaBasedSimJoinECFlow
+      case "SSJoinPosL" => SchemaBasedSimJoinECFlow // post loading on additional attributes
+      case "SSJoin" => SchemaBasedSimJoinECPreloadFlow
       case "SSParaJoin" => SchemaBasedSimJoinECParallelFlow
       case "SSBatchJoin" => SchemaBasedBatchSimJoinECFlow
       case "SSBatchV2Join" => SchemaBasedBatchV2SimJoinECFlow

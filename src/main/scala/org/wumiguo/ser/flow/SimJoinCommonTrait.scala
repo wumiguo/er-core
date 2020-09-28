@@ -120,4 +120,28 @@ trait SimJoinCommonTrait {
       filter = SpecificFieldValueFilter)
     data
   }
+
+
+  /**
+   * load data with filter option and additional fields
+   *
+   * @param dataSetConfig
+   * @param epStartID
+   * @param sourceId
+   * @return
+   */
+  def loadDataInOneGo(dataSetConfig: DataSetConfiguration,
+                      epStartID: Int, sourceId: Int): RDD[Profile] = {
+    val path = dataSetConfig.path
+    val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
+    log.info("profileLoader is " + loader)
+    val data = loader.load(
+      path, realIDField = dataSetConfig.idField,
+      startIDFrom = epStartID,
+      sourceId = sourceId, keepRealID = dataSetConfig.includeRealID,
+      fieldsToKeep = (dataSetConfig.joinAttrs.toList ++ dataSetConfig.additionalAttrs),
+      fieldValuesScope = dataSetConfig.filterOptions.toList,
+      filter = SpecificFieldValueFilter)
+    data
+  }
 }

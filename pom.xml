@@ -114,7 +114,7 @@
                             <goal>compile</goal>
                             <goal>testCompile</goal>
                         </goals>
-                        <phase>test-compile</phase>
+<!--                        <phase>test-compile</phase>-->
                     </execution>
                 </executions>
                 <configuration>

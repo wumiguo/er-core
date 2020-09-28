@@ -41,4 +41,20 @@ class SimJoinCommonTraitTest extends AnyFlatSpec with SimJoinCommonTrait with Sp
       (2, List("price up 0.4%")))
     )(attrPairTup._2.map(x => (x._1, x._2.toList)).collect.toList)
   }
+  it should "loadDataInOneGo" in {
+    val path = TestDirs.resolveDataPath("csv/sample-rates.csv")
+    val dataSetConf = DataSetConfiguration(path, "id", Seq("event"), Seq("date"))
+    val profiles = loadDataInOneGo(dataSetConf, 0, 4)
+    assertResult(List(
+      Profile(0, mutable.MutableList(KeyValue("event", "price up 1%"), KeyValue("date", "20200101")), "1", 4),
+      Profile(1, mutable.MutableList(KeyValue("event", "price drop 0.5%"), KeyValue("date", "20200102")), "2", 4),
+      Profile(2, mutable.MutableList(KeyValue("event", "price up 0.4%"), KeyValue("date", "20200103")), "3", 4)))(profiles.collect.toList)
+    val attrPairTup = collectAttributesPairFromProfiles(profiles, profiles, dataSetConf, dataSetConf)
+    assertResult(attrPairTup._1.map(x => (x._1, x._2.toList)).collect.toList)(attrPairTup._2.map(x => (x._1, x._2.toList)).collect.toList)
+    assertResult(List(
+      (0, List("price up 1%")),
+      (1, List("price drop 0.5%")),
+      (2, List("price up 0.4%")))
+    )(attrPairTup._2.map(x => (x._1, x._2.toList)).collect.toList)
+  }
 }
