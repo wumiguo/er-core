@@ -107,7 +107,7 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
     }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
-    val (columnNames, rows) = ERResultRender.renderResultWithReloadProfiles(dataSet1, dataSet2,
+    val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfiles(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1,profiles2)
     val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
