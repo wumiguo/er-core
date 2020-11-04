@@ -79,40 +79,49 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
       log.info("[SSJoin] First matches " + matchDetails.first())
     }
     val profiles = profiles1.union(profiles2)
-    val clusters = ConnectedComponentsClustering.getClusters(profiles,
-      matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
-    clusters.cache()
-    val cn = clusters.count()
+    val connectedClustering = CommandLineUtil.getParameter(args, "connectedClustering", "false").toBoolean
+    val matchedPairs = resolveMatchedPairs(connectedClustering, profiles, matchDetails, t3)
     val t4 = Calendar.getInstance().getTimeInMillis
-    log.info("[SSJoin] Number of clusters " + cn)
-    log.info("[SSJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
-
     log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
-
-    val matchedPairs = clusters.map(_._2).flatMap(idSet => {
-      val pairs = new ArrayBuffer[(Int, Int)]()
-      val idArray = idSet.toArray
-      for (i <- 0 until idArray.length) {
-        val target: Int = idArray(i)
-        for (j <- i + 1 until idArray.length) {
-          val source = idArray(j)
-          pairs += ((target, source))
-        }
-      }
-      pairs
-    })
-    if (!matchedPairs.isEmpty()) {
-      matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
-      matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
-    }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
     val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfiles(dataSet1, dataSet2,
-      secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1,profiles2)
+      secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1, profiles2)
     val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
+  }
+
+  def resolveMatchedPairs(connectedClustering: Boolean, profiles: RDD[Profile], matchDetails: RDD[(Int, Int, Double)], startTimeStamp: Long): RDD[(Int, Int)] = {
+    if (connectedClustering) {
+      val clusters = ConnectedComponentsClustering.getClusters(profiles,
+        matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
+      clusters.cache()
+      val cn = clusters.count()
+      val t4 = Calendar.getInstance().getTimeInMillis
+      log.info("[SSJoin] Number of clusters " + cn)
+      log.info("[SSJoin] Clustering time (s) " + (t4 - startTimeStamp) / 1000.0)
+      val matchedPairs = clusters.map(_._2).flatMap(idSet => {
+        val pairs = new ArrayBuffer[(Int, Int)]()
+        val idArray = idSet.toArray
+        for (i <- 0 until idArray.length) {
+          val target: Int = idArray(i)
+          for (j <- i + 1 until idArray.length) {
+            val source = idArray(j)
+            pairs += ((target, source))
+          }
+        }
+        pairs
+      })
+      if (!matchedPairs.isEmpty()) {
+        matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
+        matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
+      }
+      matchedPairs
+    } else {
+      matchDetails.map(x => (x._1, x._2))
+    }
   }
 
   def doJoin(flowOptions: Map[String, String], attributePairsArray: ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])],
