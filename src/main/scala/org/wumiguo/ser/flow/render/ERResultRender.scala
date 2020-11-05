@@ -111,10 +111,20 @@ object ERResultRender extends Serializable {
   def renderResultWithPreloadProfiles(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
                                       matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int)],
                                       showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
+    val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
+    renderResultWithPreloadProfilesAndSimilarityPairs(
+      dataSet1, dataSet2, secondEPStartID,
+      matchDetails, profiles, matchedPairsWithSimilarity,
+      showSimilarity, profiles1, profiles2
+    )
+  }
+
+  def renderResultWithPreloadProfilesAndSimilarityPairs(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
+                                                        matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairsWithSimilarity: RDD[(Int, Int, Double)],
+                                                        showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
     log.info("first profile=" + profiles1.first() + "," + profiles2.first())
     if (showSimilarity) {
-      val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
       log.info("matchedPairsWithSimilarityCount=" + matchedPairsWithSimilarity.count())
       val profileMatches2 = mapMatchesWithProfilesAndSimilarity(matchedPairsWithSimilarity, profiles, secondEPStartID)
       log.info("profileMatchesCount=" + profileMatches2.count())
@@ -130,7 +140,7 @@ object ERResultRender extends Serializable {
       val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, dataSet1, dataSet2, p1B, p2B)
       (columnNames, rows)
     } else {
-      val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles, secondEPStartID)
+      val profileMatches = mapMatchesWithProfiles(matchedPairsWithSimilarity.map(x => (x._1, x._2)), profiles, secondEPStartID)
       if (!profileMatches.isEmpty()) {
         profileMatches.take(3).foreach(x => log.info("profileMatches=" + x))
       }
