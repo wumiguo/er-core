@@ -114,7 +114,7 @@ object SchemaBasedSimJoinECParallelFlow extends ERFlow with SparkEnvSetup with S
     val showSim = showSimilarity.toBoolean
     val (columnNames, rows) = ERResultRender.renderResult(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim)
-    val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
+    val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")

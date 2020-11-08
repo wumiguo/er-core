@@ -97,7 +97,7 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
     val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfilesAndSimilarityPairs(
       dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1, profiles2)
-    val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
+    val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")

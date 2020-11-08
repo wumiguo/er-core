@@ -64,7 +64,9 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
     val attributePairsArray = collectAttributesFromProfiles(profiles1, profiles2, dataSet1, dataSet2)
     val matchDetails = doJoin(flowOptions, attributePairsArray, weighted, weightValues)
     val t2 = Calendar.getInstance().getTimeInMillis
-
+    if (!matchDetails.isEmpty()) {
+      matchDetails.take(3).foreach(x => log.info("detailx=" + x))
+    }
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
     log.info("[SSJoin] match attribute pairs " + attributePairsArray.length)
     val nm = matchDetails.count()
@@ -81,13 +83,16 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
     val profiles = profiles1.union(profiles2)
     val connectedClustering = CommandLineUtil.getParameter(args, "connectedClustering", "false").toBoolean
     val matchedPairs = resolveMatchedPairs(connectedClustering, profiles, matchDetails, t3)
+    if (!matchedPairs.isEmpty()) {
+      matchedPairs.take(3).foreach(x => log.info("detailPairx=" + x))
+    }
     val t4 = Calendar.getInstance().getTimeInMillis
     log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
     val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfiles(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1, profiles2)
-    val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
+    val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
