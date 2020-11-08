@@ -14,7 +14,7 @@ import scala.collection.mutable
  *         Created on 2020/9/22
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
-class DataSetConfigurationTest extends AnyFlatSpec  with SparkTestingEnvSetup {
+class DataSetConfigurationTest extends AnyFlatSpec with SparkTestingEnvSetup {
   it should "load data set config" in {
     var args = Array[String]()
     args :+= "dataSet1=/data-input/a.parq"
@@ -66,8 +66,6 @@ class DataSetConfigurationTest extends AnyFlatSpec  with SparkTestingEnvSetup {
   }
 
 
-
-
   it should "use csv profile loader to load" in {
     val path = TestDirs.resolveTestResourcePath("data/csv/dt01.min.csv")
     val dataSetConfig = DataSetConfiguration(path, "t_id", Seq("t_pid"), Seq("system_id"))
@@ -117,7 +115,6 @@ class DataSetConfigurationTest extends AnyFlatSpec  with SparkTestingEnvSetup {
     val path = TestDirs.resolveTestResourcePath("data/csv/dt01.min.csv")
     val dataSetConfig = DataSetConfiguration(path, "", Seq("t_id", "t_pid"), Seq("system_id"))
     val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
-    assert(loader.isInstanceOf[CSVProfileLoader.type])
     assert(!dataSetConfig.includeRealID)
     val epStartID = 0
     val sourceId = 1
@@ -140,7 +137,6 @@ class DataSetConfigurationTest extends AnyFlatSpec  with SparkTestingEnvSetup {
     val path = TestDirs.resolveTestResourcePath("data/csv/dt01.min.csv")
     val dataSetConfig = DataSetConfiguration(path, "", Seq("t_pid"), Seq("t_id", "system_id"))
     val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
-    assert(loader.isInstanceOf[CSVProfileLoader.type])
     assert(!dataSetConfig.includeRealID)
     val epStartID = 0
     val sourceId = 1
@@ -163,7 +159,6 @@ class DataSetConfigurationTest extends AnyFlatSpec  with SparkTestingEnvSetup {
     val path = TestDirs.resolveTestResourcePath("data/csv/dt01.min.csv")
     val dataSetConfig = DataSetConfiguration(path, "t_id", Seq("t_id", "t_pid"), Seq("system_id"))
     val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
-    assert(loader.isInstanceOf[CSVProfileLoader.type])
     assert(dataSetConfig.includeRealID)
     val epStartID = 0
     val sourceId = 1
