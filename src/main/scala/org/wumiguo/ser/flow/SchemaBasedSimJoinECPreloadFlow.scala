@@ -115,10 +115,6 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
         }
         pairs
       })
-      if (!matchedPairs.isEmpty()) {
-        matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
-        matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
-      }
       matchedPairs
     } else {
       matchDetails.map(x => (x._1, x._2))

@@ -13,7 +13,6 @@ import scala.collection.mutable
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 class SimJoinCommonTraitTest extends AnyFlatSpec with SimJoinCommonTrait with SparkTestingEnvSetup {
-  val spark = createTestingSparkSession(getClass.getName)
   it should "loadDataWithOption" in {
     val path = TestDirs.resolveDataPath("csv/sample-rates.csv")
     val dataSetConf = DataSetConfiguration(path, "id", Seq("event"), Seq("date"))

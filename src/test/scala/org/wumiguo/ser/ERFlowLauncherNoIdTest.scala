@@ -17,7 +17,7 @@ import scala.reflect.io.File
  */
 class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
 
-  ignore should "call ERFlowLauncher SSJoin - no id" in {
+  it should "call ERFlowLauncher SSJoin - no id" in {
     var flowArgs = Array[String]()
     flowArgs :+= "flowType=SSJoin"
     flowArgs :+= "dataSet1=" + TestDirs.resolveDataPath("flowdata/dt01.csv")
@@ -49,19 +49,15 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assertResult(3)(items.size)
+    assertResult(2)(items.size)
     assert(sameIgnoreOrder(items.map(p => {
       Profile(0, p.attributes, p.originalID, p.sourceId)
-    }), List(
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+    }),
+      List(
+        Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "12")), "", 0),
+        Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "5")), "", 0))
     ))
   }
-
 
   it should "call ERFlowLauncher SSJoin - show ID " in {
     var flowArgs = Array[String]()
@@ -100,9 +96,9 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
       Profile(0, p.attributes, p.originalID, p.sourceId)
     }), List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_id", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "12"), KeyValue("P2-p_id", "PG10091")), "", 0),
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0))
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_id", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "5"), KeyValue("P2-p_id", "PU1001")), "", 0))
     ))
   }
 

@@ -18,12 +18,13 @@ case class DataSetConfiguration(
                                  @BeanProperty var additionalAttrs: Seq[String] = Seq(),
                                  @BeanProperty var filterOptions: Seq[KeyValue] = Seq()
                                ) {
-  override def toString: String = s"DataSetConfiguration(path: $path," +
-    s" idField: $idField," +
-    s" joinAttrs: ${joinAttrs.toList}," +
-    s" filterOptions: ${filterOptions.toList}," +
-    s" additionalAttrs: ${additionalAttrs.toList}" +
-    s")"
+  override def toString: String = {
+    "DataSetConfiguration(\"" + path + "\"," +
+      idField + "," +
+      joinAttrs.toList + "," +
+      additionalAttrs.toList + "," +
+      filterOptions.toList + ")"
+  }
 
   def includeRealID(): Boolean = idField != null && !idField.trim.isEmpty && joinAttrs.contains(idField)
 
