@@ -30,9 +30,9 @@ object ERResultRender extends Serializable {
    * @param showSimilarity
    * @return
    */
-  def postLoadThenRenderResult(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
-                               matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int, Double)],
-                               showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
+  def posloadThenRenderResult(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
+                              matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int, Double)],
+                              showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
     val idFieldsProvided = checkBothIdFieldsProvided(dataSet1, dataSet2)
     log.info("idFieldsProvided=" + idFieldsProvided)
@@ -116,6 +116,15 @@ object ERResultRender extends Serializable {
     resolveIdMaps(matchesInDiffDataSet, idFieldsProvided)
   }
 
+  /**
+   * the profilePairMap can be:
+   * (originalProfile1Id, originalProfile2Id) when id fields both provided,
+   * Or (profile1Id, profile2Id)
+   *
+   * @param profilesMap
+   * @param idFieldsProvided
+   * @return
+   */
   def resolveIdMaps(profilesMap: RDD[((Profile, Profile), Long)], idFieldsProvided: Boolean): RDD[(String, String)] = {
     val profilePairMap = if (idFieldsProvided) {
       profilesMap.map(x => (x._1._1.originalID, x._1._2.originalID))
@@ -284,24 +293,9 @@ object ERResultRender extends Serializable {
     val rows = finalMap.map(x => {
       var entry = Seq[String]()
       entry :+= x._1
-      if (idFieldsProvided) {
-        //using given ID field
-        val attr1 = p1B.value.filter(p => p.originalID == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr1 = p1B.value.filter(p => p.id.toString == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry ++= retrieveAdditionalAttr(x._1, p1B, idFieldsProvided, dataSet1)
       entry :+= x._2
-      if (idFieldsProvided) {
-        val attr2 = p2B.value.filter(p => p.originalID == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr2 = p2B.value.filter(p => p.id.toString == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry ++= retrieveAdditionalAttr(x._2, p2B, idFieldsProvided, dataSet2)
       Row.fromSeq(entry)
     })
     unpersist(p1B, p2B)
@@ -319,29 +313,26 @@ object ERResultRender extends Serializable {
       entry :+= x._3.toString
       //profile1 ID field
       entry :+= x._1
-      if (idFieldsProvided) {
-        //using given ID field
-        val attr1 = p1B.value.filter(p => p.originalID == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr1 = p1B.value.filter(p => p.id.toString == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry ++= retrieveAdditionalAttr(x._1, p1B, idFieldsProvided, dataSet1)
       //profile2 ID field
       entry :+= x._2
-      if (idFieldsProvided) {
-        val attr2 = p2B.value.filter(p => p.originalID == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr2 = p2B.value.filter(p => p.id.toString == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry ++= retrieveAdditionalAttr(x._2, p2B, idFieldsProvided, dataSet2)
       Row.fromSeq(entry)
     })
     unpersist(p1B, p2B)
     rows
+  }
+
+  private def retrieveAdditionalAttr(id: String, profiles: Broadcast[Array[Profile]], idFieldsProvided: Boolean, dataSetConf: DataSetConfiguration) = {
+    val attrs = if (idFieldsProvided) {
+      //using given ID field
+      profiles.value.filter(p => p.originalID == id).flatMap(p => p.attributes)
+    } else {
+      //use profile id//this may be changing all the time
+      profiles.value.filter(p => p.id.toString == id).flatMap(p => p.attributes)
+    }
+    //append additional attrs
+    dataSetConf.additionalAttrs.map(ma => attrs.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
   }
 
   private def printSomeProfiles(finalProfiles1: RDD[Profile], finalProfiles2: RDD[Profile]) = {
