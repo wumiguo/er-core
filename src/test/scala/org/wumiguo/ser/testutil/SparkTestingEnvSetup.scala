@@ -14,6 +14,8 @@ trait SparkTestingEnvSetup {
   val log = LoggerFactory.getLogger(this.getClass.getName)
   var appConfig = scala.collection.Map[String, Any]()
   var sparkSession: SparkSession = null
+  val spark = createTestingSparkSession(getClass.getName)
+
 
   def createSparkSession(applicationName: String, appConf: SparkAppConfiguration = null): SparkSession = {
     try {

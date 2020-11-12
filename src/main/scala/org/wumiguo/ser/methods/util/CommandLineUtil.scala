@@ -3,16 +3,17 @@ package org.wumiguo.ser.methods.util
 object CommandLineUtil {
 
   def getParameter(args: Array[String], name: String, defaultValue: String = null): String = {
-    val parameterPair = args.find(_.startsWith(name + "=")).orNull
-    if (null != parameterPair) {
-      val p = parameterPair.split("=")
-      if (p.size > 1) {
-        p(1)
+    val parameterPairs = args.filter(x => x.startsWith(name + "="))
+    if (parameterPairs.length == 0) {
+      defaultValue
+    } else {
+      val parameterPair = parameterPairs.last
+      val kv = parameterPair.split("=")
+      if (kv.size > 1) {
+        kv(1)
       } else {
         ""
       }
-    } else {
-      defaultValue
     }
   }
 

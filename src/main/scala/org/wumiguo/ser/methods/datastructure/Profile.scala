@@ -22,4 +22,8 @@ case class Profile(id: Int,
   def addAttribute(a: KeyValue): Unit = {
     attributes += a
   }
+
+  override def toString: String = {
+    "Profile(" + id + "," + attributes + ", \"" + originalID + "\"," + sourceId + ")"
+  }
 }

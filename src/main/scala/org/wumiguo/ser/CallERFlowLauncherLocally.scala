@@ -18,6 +18,7 @@ object CallERFlowLauncherLocally extends SparkEnvSetup {
       outputDir.createDirectory(true)
     }
     val spark = createLocalSparkSession(getClass.getName, outputDir = outputDir.path)
-    CallERFlowLauncher.main(args)
+//    CallERFlowLauncher.main(args)
+    CallERFlowNoIdLauncher.main(args)
   }
 }

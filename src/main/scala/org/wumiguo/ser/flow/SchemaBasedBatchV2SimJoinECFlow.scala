@@ -47,12 +47,12 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     preCheckOnWeight(weightValues)
 
 
-    val profiles1: RDD[Profile] = loadDataWithOption(dataSet1, 0, 0)
+    val profiles1: RDD[Profile] = loadDataWithGivenOptionOnly(dataSet1, 0, 0)
     val numberOfProfile1 = profiles1.count()
     val secondEPStartID = numberOfProfile1.intValue()
     log.info("profiles1 count=" + numberOfProfile1)
 
-    val profiles2: RDD[Profile] = loadDataWithOption(dataSet2, secondEPStartID, 1)
+    val profiles2: RDD[Profile] = loadDataWithGivenOptionOnly(dataSet2, secondEPStartID, 1)
     log.info("profiles2 count=" + profiles2.count())
     preCheckOnProfile(profiles1)
     preCheckOnProfile(profiles2)
@@ -95,9 +95,9 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
-    val (columnNames, rows) = ERResultRender.renderResultV2(dataSet1, dataSet2,
+    val (columnNames, rows) = ERResultRender.postLoadThenRenderResult(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim)
-    val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
+    val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")

@@ -81,13 +81,14 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
     val profiles = profiles1.union(profiles2)
     val connectedClustering = CommandLineUtil.getParameter(args, "connectedClustering", "false").toBoolean
     val matchedPairs = resolveMatchedPairs(connectedClustering, profiles, matchDetails, t3)
+
     val t4 = Calendar.getInstance().getTimeInMillis
     log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
     val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfiles(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1, profiles2)
-    val overwrite = overwriteOnExist == "true" || overwriteOnExist == "1"
+    val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
@@ -114,10 +115,6 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
         }
         pairs
       })
-      if (!matchedPairs.isEmpty()) {
-        matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
-        matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
-      }
       matchedPairs
     } else {
       matchDetails.map(x => (x._1, x._2))

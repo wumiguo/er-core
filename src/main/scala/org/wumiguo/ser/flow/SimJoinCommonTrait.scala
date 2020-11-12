@@ -106,8 +106,8 @@ trait SimJoinCommonTrait {
   }
 
 
-  def loadDataWithOption(dataSetConfig: DataSetConfiguration,
-                         epStartID: Int, sourceId: Int): RDD[Profile] = {
+  def loadDataWithGivenOptionOnly(dataSetConfig: DataSetConfiguration,
+                                  epStartID: Int, sourceId: Int): RDD[Profile] = {
     val path = dataSetConfig.path
     val loader = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(path))
     log.info("profileLoader is " + loader)
@@ -123,7 +123,8 @@ trait SimJoinCommonTrait {
 
 
   /**
-   * load data with filter option and additional fields
+   * load data with filter option and additional fields in one go,
+   * which is to load all required data in one-off data loading
    *
    * @param dataSetConfig
    * @param epStartID
