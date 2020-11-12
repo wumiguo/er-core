@@ -1,6 +1,7 @@
 package org.wumiguo.ser
 
 import org.scalatest.flatspec.AnyFlatSpec
+import org.wumiguo.ser.common.ProfilesListComparison._
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
@@ -19,16 +20,32 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
 
   it should "call ERFlowLauncher SSJoinPL " in {
     val resFile = "tp_ss_join_pl"
-    var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSJoinPosL"
-    flowArgs ++= prepareDSConf()
-    flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
-    flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
-    flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + resFile
-    flowArgs :+= "overwriteOnExist=" + "true"
-    flowArgs :+= "showSimilarity=" + "true"
+    val flowType = "SSJoinPosL"
+    var flowArgs: Array[String] = prepareEdJoinOnSingleAttrFlowArgs(resFile, flowType)
+    ERFlowLauncher.main(flowArgs)
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resFile + ".csv"
+    val outputFile: File = File(outputPath)
+    assertResult(true)(outputFile.exists)
+    val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
+    val items = out.collect.toList
+    assertResult(3)(items.size)
+    assert(sameIgnoreOrder(items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    }), List(
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
+    ))
+  }
+
+  it should "call ERFlowLauncher SSJoin  - enabled connected clustering" in {
+    val flowType = "SSJoin"
+    val resFile = "tp_ss_join_ecc"
+    var flowArgs: Array[String] = prepareEdJoinOnSingleAttrFlowArgs(resFile, flowType)
+    flowArgs :+= "connectedClustering=" + "true"
     ERFlowLauncher.main(flowArgs)
     val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resFile + ".csv"
     val outputFile: File = File(outputPath)
@@ -50,51 +67,11 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
 
 
   it should "call ERFlowLauncher SSJoin " in {
-    var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSJoin"
-    flowArgs ++= prepareDSConf()
-    flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
-    flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
-    flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_ss_join"
-    flowArgs :+= "overwriteOnExist=" + "true"
-    flowArgs :+= "showSimilarity=" + "true"
-    flowArgs :+= "connectedClustering=" + "true"
+    val flowType = "SSJoin"
+    val resFile = "tp_ss_join_dcc"
+    var flowArgs: Array[String] = prepareEdJoinOnSingleAttrFlowArgs(resFile, flowType)
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_ss_join.csv"
-    val outputFile: File = File(outputPath)
-    assertResult(true)(outputFile.exists)
-    val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
-    val items = out.collect.toList
-    assertResult(3)(items.size)
-    assert(sameIgnoreOrder(items.map(p => {
-      Profile(0, p.attributes, p.originalID, p.sourceId)
-    }), List(
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0),
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1006")), "", 0))
-    ))
-  }
-
-
-  it should "call ERFlowLauncher SSJoin - disabled connected clustering " in {
-    var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSJoin"
-    flowArgs ++= prepareDSConf()
-    flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
-    flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
-    flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_ss_join_dcc"
-    flowArgs :+= "overwriteOnExist=" + "true"
-    flowArgs :+= "showSimilarity=" + "true"
-    flowArgs :+= "connectedClustering=" + "false"
-    ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_ss_join_dcc.csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resFile + ".csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
@@ -110,38 +87,10 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
       })))
   }
 
-  def sameIgnoreOrder(p1List: List[Profile], p2List: List[Profile]): Boolean = {
-    if (p1List.size == p2List.size) {
-      var counter = 0
-      for (p1 <- p1List) {
-        for (p2 <- p2List) {
-          if (p1 == p2) {
-            counter = counter + 1
-          }
-        }
-      }
-      val result = counter == p1List.size
-      if (!result) {
-        assertResult(p1List)(p2List)
-      }
-      result
-    } else {
-      assertResult(p1List)(p2List)
-      false
-    }
-  }
-
   it should "call ERFlowLauncher para-join" in {
-    var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSParaJoin"
-    flowArgs ++= prepareDSConf()
-    flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
-    flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
-    flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_para_join"
-    flowArgs :+= "overwriteOnExist=" + "true"
-    flowArgs :+= "showSimilarity=" + "true"
+    val flowType = "SSParaJoin"
+    val resFile = "tp_para_join"
+    var flowArgs: Array[String] = prepareEdJoinOnSingleAttrFlowArgs(resFile, flowType)
     ERFlowLauncher.main(flowArgs)
     val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_para_join.csv"
     val outputFile: File = File(outputPath)
@@ -164,9 +113,8 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
   it should "call ERFlowLauncher batch-join" in {
     var flowArgs = Array[String]()
     flowArgs :+= "flowType=SSBatchJoin"
-    flowArgs ++= prepareDSConf()
-    flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
+    flowArgs ++= prepare2DataSetWithIdProvidedAndSingleAttrJoinConf()
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
     flowArgs :+= "joinResultFile=" + "tp_join_batch"
@@ -194,9 +142,9 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
   it should "call ERFlowLauncher batch-V2-join" in {
     var flowArgs = Array[String]()
     flowArgs :+= "flowType=SSBatchV2Join"
-    flowArgs ++= prepareDSConf()
+    flowArgs ++= prepare2DataSetWithIdProvidedAndSingleAttrJoinConf()
     flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
     flowArgs :+= "joinResultFile=" + "tp_join_batchv2"
@@ -221,8 +169,10 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
   it should "call ERFlowLauncher SSJoin v2" in {
+    val flowType = "SSJoin"
+    val resFile = "tp_join2"
     var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSJoin"
+    flowArgs :+= "flowType=" + flowType
     flowArgs :+= "dataSet1=" + TestDirs.resolveDataPath("flowdata/dt01.csv")
     flowArgs :+= "dataSet1-id=" + "t_id"
     flowArgs :+= "dataSet1-format=" + "csv"
@@ -239,15 +189,15 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs :+= "dataSet2-filter0=type:fund"
     flowArgs :+= "dataSet2-additionalAttrSet=p_name"
     flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_join2"
+    flowArgs :+= "joinResultFile=" + resFile
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
     flowArgs :+= "connectedClustering=" + "true"
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join2.csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resFile + ".csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
@@ -270,8 +220,10 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
 
 
   it should "call ERFlowLauncher SSJoin disabled connected clustering v2" in {
+    val flowType = "SSJoin"
+    val resFile = "tp_join_dcc_2"
     var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSJoin"
+    flowArgs :+= "flowType=" + flowType
     flowArgs :+= "dataSet1=" + TestDirs.resolveDataPath("flowdata/dt01.csv")
     flowArgs :+= "dataSet1-id=" + "t_id"
     flowArgs :+= "dataSet1-format=" + "csv"
@@ -288,15 +240,15 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs :+= "dataSet2-filter0=type:fund"
     flowArgs :+= "dataSet2-additionalAttrSet=p_name"
     flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + "tp_join_dcc_2"
+    flowArgs :+= "joinResultFile=" + resFile
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
     flowArgs :+= "connectedClustering=" + "false"
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join_dcc_2.csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resFile + ".csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
@@ -314,9 +266,10 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     ))
   }
   it should "call ERFlowLauncher SSJoinPosL v2" in {
-    val resultFile = "tp_join2_posl"
+    val flowType = "SSJoinPosL"
+    val resFile = "tp_join2_posl"
     var flowArgs = Array[String]()
-    flowArgs :+= "flowType=SSJoinPosL"
+    flowArgs :+= "flowType=" + flowType
     flowArgs :+= "dataSet1=" + TestDirs.resolveDataPath("flowdata/dt01.csv")
     flowArgs :+= "dataSet1-id=" + "t_id"
     flowArgs :+= "dataSet1-format=" + "csv"
@@ -333,14 +286,14 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs :+= "dataSet2-filter0=type:fund"
     flowArgs :+= "dataSet2-additionalAttrSet=p_name"
     flowArgs :+= "joinFieldsWeight=1.0"
-    flowArgs ++= prepareFlowOpts()
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
     flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
     flowArgs :+= "outputType=" + "csv"
-    flowArgs :+= "joinResultFile=" + resultFile
+    flowArgs :+= "joinResultFile=" + resFile
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
     ERFlowLauncher.main(flowArgs)
-    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resultFile + ".csv"
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/" + resFile + ".csv"
     val outputFile: File = File(outputPath)
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
@@ -412,7 +365,21 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     )))
   }
 
-  private def prepareDSConf() = {
+
+  private def prepareEdJoinOnSingleAttrFlowArgs(resFile: String, flowType: String) = {
+    var flowArgs = Array[String]()
+    flowArgs :+= "flowType=" + flowType
+    flowArgs ++= prepare2DataSetWithIdProvidedAndSingleAttrJoinConf()
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
+    flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
+    flowArgs :+= "outputType=" + "csv"
+    flowArgs :+= "joinResultFile=" + resFile
+    flowArgs :+= "overwriteOnExist=" + "true"
+    flowArgs :+= "showSimilarity=" + "true"
+    flowArgs
+  }
+
+  private def prepare2DataSetWithIdProvidedAndSingleAttrJoinConf() = {
     var flowArgs: Array[String] = Array()
     flowArgs :+= "dataSet1=" + TestDirs.resolveDataPath("flowdata/dt01.csv")
     flowArgs :+= "dataSet1-id=" + "t_id"
@@ -429,11 +396,12 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs :+= "dataSet2-filterSize=1"
     flowArgs :+= "dataSet2-filter0=type:fund"
     flowArgs :+= "dataSet2-additionalAttrSet="
+    flowArgs :+= "joinFieldsWeight=1.0"
     flowArgs
   }
 
 
-  private def prepareFlowOpts() = {
+  private def prepareQ2T1EDJFlowOpts() = {
     var flowArgs = Array[String]()
     flowArgs :+= "optionSize=3"
     flowArgs :+= "option0=q:2"

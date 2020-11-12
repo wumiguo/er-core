@@ -21,7 +21,7 @@ object ERFlowLauncher {
       case "End2EndSample" => End2EndSimpleFlowSample
       case "SSJoinSample" => SchemaBasedSimJoinECFlowSample
       case "SSJoinPosL" => SchemaBasedSimJoinECFlow // post loading on additional attributes
-      case "SSJoin" => SchemaBasedSimJoinECPreloadFlow
+      case "SSJoin" => SchemaBasedSimJoinECPreloadFlow // Recommend to use since 20201112
       case "SSParaJoin" => SchemaBasedSimJoinECParallelFlow
       case "SSBatchJoin" => SchemaBasedBatchSimJoinECFlow
       case "SSBatchV2Join" => SchemaBasedBatchV2SimJoinECPreloadFlow
