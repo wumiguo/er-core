@@ -15,7 +15,7 @@ import scala.collection.mutable
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 class ERResultRenderTest extends AnyFlatSpec with SparkTestingEnvSetup {
-  it should "renderResultWithPreloadProfiles" in {
+  it should "renderResultWithPreloadProfiles - no id fields" in {
     val dt = TestDirs.resolveDataPath("flowdata/dt01.csv")
     val dp = TestDirs.resolveDataPath("flowdata/dp01.csv")
     val dataSet1: DataSetConfiguration = DataSetConfiguration(dt, "", List("t_pid"), List("t_id", "t_pid"), List(KeyValue("site", "CN"), KeyValue("t_date", "20200715")))
@@ -71,8 +71,8 @@ class ERResultRenderTest extends AnyFlatSpec with SparkTestingEnvSetup {
     )
     assertResult(Seq("Similarity", "P1-ID", "P1-t_id", "P1-t_pid", "P2-ID", "P2-p_id"))(columnNames)
     assertResult(List(
-      List("1.0", "4", "TCN001312", "PG10091", "12", "PG10091"),
-      List("1.0", "0", "TCN001278", "U1001", "5", "PU1001")
+      List("1.0", "4", "TCN001312", "PG10091", "7", "PG10091"),
+      List("1.0", "0", "TCN001278", "U1001", "0", "PU1001")
     ))(rows.collect.map(x => x.toSeq.toList).toList)
   }
 

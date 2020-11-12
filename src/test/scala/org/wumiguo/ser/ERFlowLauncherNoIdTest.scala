@@ -54,8 +54,8 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
       Profile(0, p.attributes, p.originalID, p.sourceId)
     }),
       List(
-        Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "12")), "", 0),
-        Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "5")), "", 0))
+        Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "7")), "", 0),
+        Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "0")), "", 0))
     ))
   }
 
@@ -96,9 +96,9 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
       Profile(0, p.attributes, p.originalID, p.sourceId)
     }), List(
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_id", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "12"), KeyValue("P2-p_id", "PG10091")), "", 0),
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_id", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "7"), KeyValue("P2-p_id", "PG10091")), "", 0),
       Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_id", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "5"), KeyValue("P2-p_id", "PU1001")), "", 0))
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_id", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "0"), KeyValue("P2-p_id", "PU1001")), "", 0))
     ))
   }
 
