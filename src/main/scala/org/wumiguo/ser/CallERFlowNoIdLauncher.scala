@@ -8,7 +8,8 @@ package org.wumiguo.ser
 object CallERFlowNoIdLauncher {
   def main(args: Array[String]): Unit = {
     var flowArgs = Array[String]()
-    flowArgs +:= "flowType=SSBatchV2Join"
+    flowArgs +:= "flowType=SSJoin"
+    //    flowArgs +:= "flowType=SSBatchV2Join"
     //    flowArgs +:= "flowType=SSParaJoin"
     flowArgs +:= "dataSet1=" + "src/main/resources/sampledata/dt01.csv"
     flowArgs +:= "dataSet1-id=" + ""
@@ -22,7 +23,7 @@ object CallERFlowNoIdLauncher {
     flowArgs +:= "dataSet2-attrSet=" + "p_id,system_id"
     flowArgs +:= "dataSet2-filterSize=1"
     flowArgs +:= "dataSet2-filter0=type:fund"
-    flowArgs +:= "dataSet2-additionalAttrSet=p_name,remark,system_id"
+    flowArgs +:= "dataSet2-additionalAttrSet=p_id,p_name,remark,system_id"
     flowArgs +:= "joinFieldsWeight=0.001,0.999"
     flowArgs +:= "optionSize=4"
     flowArgs +:= "option0=q:2"
