@@ -30,9 +30,9 @@ object ERResultRender extends Serializable {
    * @param showSimilarity
    * @return
    */
-  def postLoadThenRenderResult(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
-                               matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int, Double)],
-                               showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
+  def posLoadThenRenderResult(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration, secondEPStartID: Int,
+                              matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairs: RDD[(Int, Int, Double)],
+                              showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
     val idFieldsProvided = checkBothIdFieldsProvided(dataSet1, dataSet2)
     log.info("idFieldsProvided=" + idFieldsProvided)
@@ -47,7 +47,7 @@ object ERResultRender extends Serializable {
       val p1B = matchDetails.sparkContext.broadcast(finalProfiles1.collect())
       val finalProfiles2: RDD[Profile] = loadAndFilterProfilesByIDPairWithSimilarity(1, dataSet2, profilePairMap)
       val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
-      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B)
+      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID)
       (columnNames, rows)
     } else {
       val profileMatches = mapMatchesWithProfiles(matchedPairs.map(x => (x._1, x._2)), profiles, secondEPStartID)
@@ -59,7 +59,7 @@ object ERResultRender extends Serializable {
       val finalProfiles2: RDD[Profile] = loadAndFilterProfilesByIDPair(1, dataSet2, profilePairMap)
       val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       printSomeProfiles(finalProfiles1, finalProfiles2)
-      val rows: RDD[Row] = resolveRows(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B)
+      val rows: RDD[Row] = resolveRows(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID)
       (columnNames, rows)
     }
   }
@@ -100,7 +100,7 @@ object ERResultRender extends Serializable {
     )
   }
 
-  def checkBothIdFieldsProvided(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration): Boolean = {
+  private def checkBothIdFieldsProvided(dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration): Boolean = {
     dataSet1.idField != null && dataSet2.idField != null && dataSet1.idField != "" && dataSet2.idField != ""
   }
 
@@ -116,6 +116,15 @@ object ERResultRender extends Serializable {
     resolveIdMaps(matchesInDiffDataSet, idFieldsProvided)
   }
 
+  /**
+   * the profilePairMap can be:
+   * (originalProfile1Id, originalProfile2Id) when id fields both provided,
+   * Or (profile1Id, profile2Id)
+   *
+   * @param profilesMap
+   * @param idFieldsProvided
+   * @return
+   */
   def resolveIdMaps(profilesMap: RDD[((Profile, Profile), Long)], idFieldsProvided: Boolean): RDD[(String, String)] = {
     val profilePairMap = if (idFieldsProvided) {
       profilesMap.map(x => (x._1._1.originalID, x._1._2.originalID))
@@ -168,7 +177,7 @@ object ERResultRender extends Serializable {
       }
       val p1B = matchDetails.sparkContext.broadcast(trimDownProfiles1.collect())
       val p2B = matchDetails.sparkContext.broadcast(trimDownProfiles2.collect())
-      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B)
+      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID)
       (columnNames, rows)
     } else {
       val profileMatches = mapMatchesWithProfiles(matchedPairsWithSimilarity.map(x => (x._1, x._2)), profiles, secondEPStartID)
@@ -182,7 +191,7 @@ object ERResultRender extends Serializable {
       val trimDownProfiles2: RDD[Profile] = trimDownById(1, dataSet2, profiles2, profilePairMap, idFieldsProvided)
       val p1B = matchDetails.sparkContext.broadcast(trimDownProfiles1.collect())
       val p2B = matchDetails.sparkContext.broadcast(trimDownProfiles2.collect())
-      val rows: RDD[Row] = resolveRows(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B)
+      val rows: RDD[Row] = resolveRows(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID)
       (columnNames, rows)
     }
   }
@@ -216,6 +225,7 @@ object ERResultRender extends Serializable {
                    showSimilarity: Boolean): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
     val idFieldsProvided = checkBothIdFieldsProvided(dataSet1, dataSet2)
+    log.info("idFieldsProvided=" + idFieldsProvided)
     val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
     if (showSimilarity) {
       val matchedPairsWithSimilarity = enrichPairs(matchedPairs)
@@ -229,7 +239,7 @@ object ERResultRender extends Serializable {
       val finalProfiles2: RDD[Profile] = loadAndFilterProfilesByIDPairWithSimilarity(1, dataSet2, profilePairMap)
       val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       printSomeProfiles(finalProfiles1, finalProfiles2)
-      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B)
+      val rows: RDD[Row] = resolveRowsWithSimilarity(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID)
       (columnNames, rows)
     } else {
       val profileMatches = mapMatchesWithProfiles(matchedPairs, profiles, secondEPStartID)
@@ -244,7 +254,7 @@ object ERResultRender extends Serializable {
       val finalProfiles2: RDD[Profile] = loadAndFilterProfilesByIDPair(1, dataSet2, profilePairMap)
       val p2B = matchDetails.sparkContext.broadcast(finalProfiles2.collect())
       printSomeProfiles(finalProfiles1, finalProfiles2)
-      val rows: RDD[Row] = resolveRows(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B)
+      val rows: RDD[Row] = resolveRows(profilePairMap, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID)
       (columnNames, rows)
     }
   }
@@ -280,28 +290,14 @@ object ERResultRender extends Serializable {
 
   private def resolveRows(finalMap: RDD[(String, String)], idFieldsProvided: Boolean,
                           dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration,
-                          p1B: Broadcast[Array[Profile]], p2B: Broadcast[Array[Profile]]) = {
+                          p1B: Broadcast[Array[Profile]], p2B: Broadcast[Array[Profile]],
+                          secondEPStartID: Int) = {
     val rows = finalMap.map(x => {
       var entry = Seq[String]()
       entry :+= x._1
-      if (idFieldsProvided) {
-        //using given ID field
-        val attr1 = p1B.value.filter(p => p.originalID == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr1 = p1B.value.filter(p => p.id.toString == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
-      entry :+= x._2
-      if (idFieldsProvided) {
-        val attr2 = p2B.value.filter(p => p.originalID == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr2 = p2B.value.filter(p => p.id.toString == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry ++= retrieveAdditionalAttr(x._1, p1B, idFieldsProvided, dataSet1)
+      entry :+= adjustProfile2RelativeId(x._2, secondEPStartID, idFieldsProvided)
+      entry ++= retrieveAdditionalAttr(x._2, p2B, idFieldsProvided, dataSet2)
       Row.fromSeq(entry)
     })
     unpersist(p1B, p2B)
@@ -312,36 +308,42 @@ object ERResultRender extends Serializable {
   private def resolveRowsWithSimilarity(finalMap: RDD[(String, String, Double)],
                                         idFieldsProvided: Boolean,
                                         dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration,
-                                        p1B: Broadcast[Array[Profile]], p2B: Broadcast[Array[Profile]]) = {
+                                        p1B: Broadcast[Array[Profile]], p2B: Broadcast[Array[Profile]],
+                                        secondEPStartID: Int) = {
     val rows = finalMap.map(x => {
       var entry = Seq[String]()
       //similarity : _3
       entry :+= x._3.toString
       //profile1 ID field
       entry :+= x._1
-      if (idFieldsProvided) {
-        //using given ID field
-        val attr1 = p1B.value.filter(p => p.originalID == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr1 = p1B.value.filter(p => p.id.toString == x._1).flatMap(p => p.attributes)
-        entry ++= dataSet1.additionalAttrs.map(ma => attr1.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry ++= retrieveAdditionalAttr(x._1, p1B, idFieldsProvided, dataSet1)
       //profile2 ID field
-      entry :+= x._2
-      if (idFieldsProvided) {
-        val attr2 = p2B.value.filter(p => p.originalID == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value).toSeq
-      } else {
-        //use profile id//this may be changing all the time
-        val attr2 = p2B.value.filter(p => p.id.toString == x._2).flatMap(p => p.attributes)
-        entry ++= dataSet2.additionalAttrs.map(ma => attr2.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
-      }
+      entry :+= adjustProfile2RelativeId(x._2, secondEPStartID, idFieldsProvided)
+      entry ++= retrieveAdditionalAttr(x._2, p2B, idFieldsProvided, dataSet2)
       Row.fromSeq(entry)
     })
     unpersist(p1B, p2B)
     rows
+  }
+
+  private def adjustProfile2RelativeId(profile2Id: String, secondEPStartID: Int, idFieldsProvided: Boolean): String = {
+    if (idFieldsProvided) {
+      profile2Id
+    } else {
+      (profile2Id.toInt - secondEPStartID).toString
+    }
+  }
+
+  private def retrieveAdditionalAttr(id: String, profiles: Broadcast[Array[Profile]], idFieldsProvided: Boolean, dataSetConf: DataSetConfiguration) = {
+    val attrs = if (idFieldsProvided) {
+      //using given ID field
+      profiles.value.filter(p => p.originalID == id).flatMap(p => p.attributes)
+    } else {
+      //use profile id//this may be changing all the time
+      profiles.value.filter(p => p.id.toString == id).flatMap(p => p.attributes)
+    }
+    //append additional attrs
+    dataSetConf.additionalAttrs.map(ma => attrs.find(_.key == ma).getOrElse(KeyValue("", "N/A")).value)
   }
 
   private def printSomeProfiles(finalProfiles1: RDD[Profile], finalProfiles2: RDD[Profile]) = {

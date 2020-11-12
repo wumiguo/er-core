@@ -95,7 +95,7 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
-    val (columnNames, rows) = ERResultRender.postLoadThenRenderResult(dataSet1, dataSet2,
+    val (columnNames, rows) = ERResultRender.posLoadThenRenderResult(dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim)
     val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
