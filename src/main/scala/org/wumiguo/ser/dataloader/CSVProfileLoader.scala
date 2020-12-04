@@ -2,6 +2,7 @@ package org.wumiguo.ser.dataloader
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 import org.wumiguo.ser.dataloader.filter.{DummyFieldFilter, FieldFilter}
 import org.wumiguo.ser.methods.datastructure
 import org.wumiguo.ser.methods.datastructure.{KeyValue, MatchingEntities, Profile}
@@ -14,6 +15,7 @@ import org.wumiguo.ser.methods.util.PrintContext
  */
 object CSVProfileLoader extends ProfileLoaderTrait {
 
+  val log = LoggerFactory.getLogger(this.getClass.getName)
 
   override def load(filePath: String, startIDFrom: Int, realIDField: String, sourceId: Int,
                     fieldsToKeep: List[String], keepRealID: Boolean = false,
@@ -62,16 +64,13 @@ object CSVProfileLoader extends ProfileLoaderTrait {
     df.rdd.map(row => rowToAttributes(columnNames, row, explodeInnerFields, innerSeparator))
       .filter(kvList => filter.filter(kvList.toList, fieldValuesScope))
       .zipWithIndex().map {
-      profile =>
+      profile => {
         val profileID = profile._2.toInt + startIDFrom
         val attributes = profile._1
-        val realID = {
-          if (realIDField.isEmpty) {
-            ""
-          }
-          else {
-            attributes.filter(_.key.toLowerCase() == lcRealIDField).map(_.value).mkString("").trim
-          }
+        val realID = if (realIDField.isEmpty) {
+          ""
+        } else {
+          attributes.filter(_.key.toLowerCase() == lcRealIDField).map(_.value).mkString("").trim
         }
         Profile(profileID,
           attributes.filter(kv => {
@@ -82,6 +81,7 @@ object CSVProfileLoader extends ProfileLoaderTrait {
                 (fieldsToKeep.isEmpty || fieldsToKeep.contains(kv.key)))
           }),
           realID, sourceId)
+      }
     }
   }
 }

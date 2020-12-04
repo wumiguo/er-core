@@ -9,8 +9,8 @@ object CallERFlowNoIdLauncher {
   def main(args: Array[String]): Unit = {
     var flowArgs = Array[String]()
     flowArgs +:= "flowType=SSJoin"
-    //    flowArgs +:= "flowType=SSBatchV2Join"
-    //    flowArgs +:= "flowType=SSParaJoin"
+    // flowArgs +:= "flowType=SSBatchV2Join"
+    // flowArgs +:= "flowType=SSParaJoin"
     flowArgs +:= "dataSet1=" + "src/main/resources/sampledata/dt01.csv"
     flowArgs +:= "dataSet1-id=" + ""
     flowArgs +:= "dataSet1-attrSet=" + "t_pid,system_id"
