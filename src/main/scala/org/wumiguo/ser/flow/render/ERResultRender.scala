@@ -205,18 +205,20 @@ object ERResultRender extends Serializable {
       x._1
     } else {
       x._2
-    }).toLocalIterator.toSet
+    }).distinct()
+    val idSetB = profiles.sparkContext.broadcast(idSet.collect())
     if (debug) {
       log.info("trimDownByProfileId - sourceId=" + sourceId + ",idSet=" + idSet)
     }
     val trimDownProfiles =
       if (idFieldsProvided) {
-        profiles.filter(x => idSet.contains(x.originalID)).map(x =>
+        profiles.filter(x => idSetB.value.contains(x.originalID)).map(x =>
           Profile(x.id, x.attributes.filter(y => y.key == dataSet.idField || dataSet.additionalAttrs.contains(y.key)), x.originalID, x.sourceId))
       } else {
-        profiles.filter(x => idSet.contains(x.id.toString)).map(x =>
+        profiles.filter(x => idSetB.value.contains(x.id.toString)).map(x =>
           Profile(x.id, x.attributes.filter(y => dataSet.additionalAttrs.contains(y.key)), x.originalID, x.sourceId))
       }
+    idSetB.unpersist()
     trimDownProfiles
   }
 
@@ -277,13 +279,15 @@ object ERResultRender extends Serializable {
       x._1
     } else {
       x._2
-    })).toLocalIterator.toList
-    val finalFilterOption = (dataSetConf.filterOptions.filter(_.key != dataSetConf.idField) ++ idFilterOption).toList
+    }))
+    val idFilterOptionB = profilePairMap.sparkContext.broadcast(idFilterOption.collect())
+    val finalFilterOption = (dataSetConf.filterOptions.filter(_.key != dataSetConf.idField) ++ idFilterOptionB.value).toList
     val finalProfiles = getProfileLoader(dataSetConf.path).load(dataSetConf.path, realIDField = dataSetConf.idField,
       startIDFrom = 0, sourceId = sourceId, keepRealID = dataSetConf.includeRealID, fieldsToKeep = dataSetConf.additionalAttrs.toList,
       fieldValuesScope = finalFilterOption,
       filter = SpecificFieldValueFilter
     )
+    idFilterOptionB.unpersist()
     finalProfiles
   }
 
