@@ -399,7 +399,7 @@ object EDBatchJoin {
     val candidates = getCandidates(documents, qgramLength, threshold)
 
     val t2 = Calendar.getInstance().getTimeInMillis
-    //can pass length from outside instead of reading first item
+    //TODO: can pass length from outside instead of reading first item
     val attrLength = if (documents.isEmpty) {
       0
     } else {

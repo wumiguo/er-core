@@ -154,7 +154,9 @@ object ERResultRender extends Serializable {
                                                         matchDetails: RDD[(Int, Int, Double)], profiles: RDD[Profile], matchedPairsWithSimilarity: RDD[(Int, Int, Double)],
                                                         showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
     log.info("showSimilarity=" + showSimilarity)
-    log.info("first profile=" + profiles1.first() + "," + profiles2.first())
+    if (debug) {
+      log.info("first profile=" + profiles1.first() + "," + profiles2.first())
+    }
     val idFieldsProvided = checkBothIdFieldsProvided(dataSet1, dataSet2)
     log.info("idFieldsProvided=" + idFieldsProvided)
     val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)

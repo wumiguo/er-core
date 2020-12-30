@@ -17,6 +17,7 @@ import scala.collection.mutable.ArrayBuffer
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 trait SimJoinCommonTrait {
+  val debug = false
 
   def collectAttributesFromProfiles(profiles1: RDD[Profile], profiles2: RDD[Profile], dataSet1: DataSetConfiguration, dataSet2: DataSetConfiguration):
   ArrayBuffer[(RDD[(Int, String)], RDD[(Int, String)])] = {
@@ -28,7 +29,7 @@ trait SimJoinCommonTrait {
       attributesArray :+= ((attributes1, attributes2))
     }
     log.info("attrsArrayLength=" + attributesArray.length)
-    if (attributesArray.length > 0) {
+    if (debug && attributesArray.length > 0) {
       log.info("attrsArrayHead _1count=" + attributesArray.head._1.count() + ", _2count=" + attributesArray.head._2.count())
       log.info("attrsArrayHead _1first=" + attributesArray.head._1.first() + ", _2first=" + attributesArray.head._2.first())
     }
