@@ -139,6 +139,34 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
   }
 
 
+  it should "call ERFlowLauncher batch-V2-join -dcc " in {
+    var flowArgs = Array[String]()
+    flowArgs :+= "flowType=SSBatchV2Join"
+    flowArgs ++= prepare2DataSetWithIdProvidedAndSingleAttrJoinConf()
+    flowArgs :+= "joinFieldsWeight=1.0"
+    flowArgs ++= prepareQ2T1EDJFlowOpts()
+    flowArgs :+= "outputPath=" + TestDirs.resolveOutputPath("trade-product")
+    flowArgs :+= "outputType=" + "csv"
+    flowArgs :+= "joinResultFile=" + "tp_join_batchv2_dcc"
+    flowArgs :+= "overwriteOnExist=" + "true"
+    flowArgs :+= "showSimilarity=" + "true"
+    ERFlowLauncher.main(flowArgs)
+    val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join_batchv2_dcc.csv"
+    val outputFile: File = File(outputPath)
+    assertResult(true)(outputFile.exists)
+    val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
+    val items = out.collect.toList
+    assert(sameIgnoreOrder(List(
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+      Profile(0, mutable.MutableList(
+        KeyValue("Similarity", "0.8333333333333334"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0)
+    ),items.map(p => {
+      Profile(0, p.attributes, p.originalID, p.sourceId)
+    })))
+  }
+
+
   it should "call ERFlowLauncher batch-V2-join" in {
     var flowArgs = Array[String]()
     flowArgs :+= "flowType=SSBatchV2Join"
@@ -150,6 +178,7 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     flowArgs :+= "joinResultFile=" + "tp_join_batchv2"
     flowArgs :+= "overwriteOnExist=" + "true"
     flowArgs :+= "showSimilarity=" + "true"
+    flowArgs :+= "connectedClustering=" + "true"
     ERFlowLauncher.main(flowArgs)
     val outputPath = TestDirs.resolveOutputPath("trade-product") + "/tp_join_batchv2.csv"
     val outputFile: File = File(outputPath)

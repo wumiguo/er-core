@@ -74,26 +74,17 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
       log.info("[SSJoin] First matches " + matchDetails.first())
     }
     val profiles = profiles1.union(profiles2)
-    val clusters = if (showSimilarity.toBoolean) {
-      ConnectedComponentsClustering.linkWeightedCluster(profiles,
-        matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
-    } else {
-      ConnectedComponentsClustering.getWeightedClustersV2(profiles, matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
-    }
-    clusters.cache()
-    val cn = clusters.count()
-    val t4 = Calendar.getInstance().getTimeInMillis
-    log.info("[SSJoin] Number of clusters " + cn)
-    log.info("[SSJoin] Clustering time (s) " + (t4 - t3) / 1000.0)
-    log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
+    val showSim = showSimilarity.toBoolean
     val connectedLinkageThreshold = flowOptions.getOrElse("relativeLinkageThreshold", "0.0").toDouble
-    val matchedPairs: RDD[(Int, Int, Double)] = filterConnectedCluster(clusters, connectedLinkageThreshold)
+    val connectedClustering = CommandLineUtil.getParameter(args, "connectedClustering", "false").toBoolean
+    val matchedPairs = resolveMatchedPair(connectedClustering, showSim, profiles, matchDetails, connectedLinkageThreshold, t3)
+    val t4 = Calendar.getInstance().getTimeInMillis
+    log.info("[SSJoin] Total time (s) " + (t4 - t1) / 1000.0)
     if (!matchedPairs.isEmpty()) {
       matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
       matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
     }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
-    val showSim = showSimilarity.toBoolean
     val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfilesAndSimilarityPairs(
       dataSet1, dataSet2,
       secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1, profiles2)
@@ -101,6 +92,26 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
     log.info("[SSJoin] Completed")
+  }
+
+  def resolveMatchedPair(connectedClustering: Boolean, showSimilarity: Boolean, profiles: RDD[Profile], matchDetails: RDD[(Int, Int, Double)],
+                         connectedLinkageThreshold: Double, startTimeStamp: Long): RDD[(Int, Int, Double)] = {
+    if (connectedClustering) {
+      val clusters = if (showSimilarity) {
+        ConnectedComponentsClustering.linkWeightedCluster(profiles,
+          matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
+      } else {
+        ConnectedComponentsClustering.getWeightedClustersV2(profiles, matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
+      }
+      clusters.cache()
+      val cn = clusters.count()
+      val t4 = Calendar.getInstance().getTimeInMillis
+      log.info("[SSJoin] Number of clusters " + cn)
+      log.info("[SSJoin] Clustering time (s) " + (t4 - startTimeStamp) / 1000.0)
+      filterConnectedCluster(clusters, connectedLinkageThreshold)
+    } else {
+      matchDetails
+    }
   }
 
   def filterConnectedCluster(clusters: RDD[(Int, (Set[Int], Map[(Int, Int), Double]))], connectedLinkageThreshold: Double): RDD[(Int, Int, Double)] = {
