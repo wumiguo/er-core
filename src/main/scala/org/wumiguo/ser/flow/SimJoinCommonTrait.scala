@@ -52,6 +52,12 @@ trait SimJoinCommonTrait {
     attributesArray
   }
 
+  def preCheckOnProfile(numberOfProfile: Long) = {
+    if (numberOfProfile <= 0) {
+      throw new RuntimeException("Empty profile data set")
+    }
+  }
+
   def preCheckOnProfile(profiles: RDD[Profile]) = {
     if (profiles.isEmpty()) {
       throw new RuntimeException("Empty profile data set")
