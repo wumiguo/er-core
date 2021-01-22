@@ -155,13 +155,13 @@ object SchemaBasedSimJoinECPreloadFlow extends ERFlow with SparkEnvSetup with Si
     for (i <- 1 until attributePairsArray.length) {
       val next = attributePairsArray(i)
       if (weighted) {
-        log.info("union with next join-feild")
+        log.info("union with next join-field")
         val nextMatches = getMatches(next).map(x => (x._1, x._2, weights(i) / (x._3 + 1)))
         attributesMatches = attributesMatches.union(nextMatches).groupBy(x => (x._1, x._2)).map(x => x._2.reduce((y, z) =>
           (y._1, y._2, (BigDecimal(y._3.toString) + BigDecimal(z._3.toString)).setScale(scale, BigDecimal.RoundingMode.HALF_UP).doubleValue())
         ))
       } else {
-        log.info("intersection with next join-feild")
+        log.info("intersection with next join-field")
         attributesMatches = attributesMatches.intersection(getMatches(next))
       }
     }

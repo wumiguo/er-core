@@ -106,7 +106,7 @@ object ERResultRender extends Serializable {
     if (debug) {
       matchesInDiffDataSet.foreach(x => log.info("matchesInDiffDataSetX=" + x))
     }
-    log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
+    // log.info("[SSJoin] Get matched pairs " + matchesInDiffDataSet.count())
     profilePairAsIdPair(matchesInDiffDataSet, idFieldsProvided)
   }
 
@@ -198,8 +198,8 @@ object ERResultRender extends Serializable {
                                                           showSimilarity: Boolean, profiles1: RDD[Profile], profiles2: RDD[Profile]): (Seq[String], RDD[Row]) = {
     log.info("renderResultWithPreloadProfilesAndSimilarityPairsV2")
     log.info("showSimilarity=" + showSimilarity)
-    val idFieldProvided = checkBothIdFieldsProvided(dataSet1, dataSet2)
-    log.info("idFieldProvided=" + idFieldProvided)
+    val idFieldsProvided = checkBothIdFieldsProvided(dataSet1, dataSet2)
+    log.info("idFieldsProvided=" + idFieldsProvided)
     val columnNames: Seq[String] = resolveColumns(dataSet1.additionalAttrs, dataSet2.additionalAttrs, showSimilarity)
 
     def trimThenSwap(matchedPairsWithSimilarity: RDD[(Int, Int, Double)], secondEPStartId: Int) = {
@@ -234,19 +234,19 @@ object ERResultRender extends Serializable {
 
     val finalP1P2Map = trimThenSwap(matchedPairsWithSimilarity, secondEPStartID)
     finalP1P2Map.persist(StorageLevel.MEMORY_AND_DISK)
-    val (trimDownProfile1, trimDownProfile2) = (
+    val (trimDownProfiles1, trimDownProfiles2) = (
       trimDownProfiles(0, dataSet1, profiles1, finalP1P2Map),
       trimDownProfiles(1, dataSet2, profiles2, finalP1P2Map)
     )
-    val p1B = finalP1P2Map.sparkContext.broadcast(trimDownProfile1.collect)
-    val p2B = finalP1P2Map.sparkContext.broadcast(trimDownProfile2.collect)
-    val rows: RDD[Row] = resolveRowsV2(finalP1P2Map, idFieldProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID, showSimilarity)
+    val p1B = finalP1P2Map.sparkContext.broadcast(trimDownProfiles1.collect)
+    val p2B = finalP1P2Map.sparkContext.broadcast(trimDownProfiles2.collect)
+    val rows: RDD[Row] = resolveRowsV2(finalP1P2Map, idFieldsProvided, dataSet1, dataSet2, p1B, p2B, secondEPStartID, showSimilarity)
     finalP1P2Map.unpersist()
     (columnNames, rows)
   }
 
-  private def trimDownByIdWithSimilarity(sourceId: Int, dataSet: DataSetConfiguration, profiles: RDD[Profile], profilePairMap: RDD[(String, String, Double)], idFieldsProvided: Boolean) = {
-    trimDownById(sourceId, dataSet, profiles, profilePairMap.map(x => (x._1, x._2)), idFieldsProvided)
+  private def trimDownByIdWithSimilarity(sourceId: Int, dataSet: DataSetConfiguration, profiles: RDD[Profile], profileMatchPair: RDD[(String, String, Double)], idFieldsProvided: Boolean) = {
+    trimDownById(sourceId, dataSet, profiles, profileMatchPair.map(x => (x._1, x._2)), idFieldsProvided)
   }
 
   private def trimDownById(sourceId: Int, dataSet: DataSetConfiguration, profiles: RDD[Profile], profileMatchPair: RDD[(String, String)], idFieldsProvided: Boolean) = {

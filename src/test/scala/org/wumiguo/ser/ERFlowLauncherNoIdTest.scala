@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
-import org.wumiguo.ser.testutil.{SparkTestingEnvSetup, TestDirs}
+import org.wumiguo.ser.testutil.{CollectionsComparision, SparkTestingEnvSetup, TestDirs}
 
 import scala.collection.mutable
 import scala.reflect.io.File
@@ -50,13 +50,12 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
     assertResult(2)(items.size)
-    assert(sameIgnoreOrder(items.map(p => {
-      Profile(0, p.attributes, p.originalID, p.sourceId)
-    }),
+    CollectionsComparision.assertSameIgnoreOrder(
       List(
         Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "7")), "", 0),
         Profile(0, mutable.MutableList(KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "0")), "", 0))
-    ))
+      , items.map(p => Profile(0, p.attributes, p.originalID, p.sourceId))
+    )
   }
 
   it should "call ERFlowLauncher SSJoin - show ID " in {
@@ -92,14 +91,12 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
     assertResult(2)(items.size)
-    assert(sameIgnoreOrder(items.map(p => {
-      Profile(0, p.attributes, p.originalID, p.sourceId)
-    }), List(
+    CollectionsComparision.assertSameIgnoreOrder(List(
       Profile(0, mutable.MutableList(
         KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "4"), KeyValue("P1-t_id", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "7"), KeyValue("P2-p_id", "PG10091")), "", 0),
       Profile(0, mutable.MutableList(
         KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "0"), KeyValue("P1-t_id", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "0"), KeyValue("P2-p_id", "PU1001")), "", 0))
-    ))
+      , items.map(p => Profile(0, p.attributes, p.originalID, p.sourceId)))
   }
 
   it should "call ERFlowLauncher SSJoin - with ID " in {
@@ -135,14 +132,14 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
     assertResult(2)(items.size)
-    assert(sameIgnoreOrder(items.map(p => {
-      Profile(0, p.attributes, p.originalID, p.sourceId)
-    }), List(
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
-      Profile(0, mutable.MutableList(
-        KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0))
-    ))
+    CollectionsComparision.assertSameIgnoreOrder(
+      List(
+        Profile(0, mutable.MutableList(
+          KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
+        Profile(0, mutable.MutableList(
+          KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0))
+      , items.map(p => Profile(0, p.attributes, p.originalID, p.sourceId)
+      ))
   }
 
   private def prepareDSConf() = {
@@ -172,28 +169,6 @@ class ERFlowLauncherNoIdTest extends AnyFlatSpec with SparkTestingEnvSetup {
     flowArgs :+= "option1=threshold:1" //0,1,2
     flowArgs :+= "option2=algorithm:EDJoin"
     flowArgs
-  }
-
-  def sameIgnoreOrder(p1List: List[Profile], p2List: List[Profile]): Boolean = {
-    if (p1List.size == p2List.size) {
-      var counter = 0
-      for (p1 <- p1List) {
-        for (p2 <- p2List) {
-          if (p1 == p2) {
-            counter = counter + 1
-          }
-        }
-      }
-      val result = counter == p1List.size
-      if (!result) {
-        assertResult(p1List)(p2List)
-      }
-      result
-    } else {
-      log.info("p1:" + p1List + " p2:" + p2List)
-      assertResult(p1List)(p2List)
-      false
-    }
   }
 
 }
