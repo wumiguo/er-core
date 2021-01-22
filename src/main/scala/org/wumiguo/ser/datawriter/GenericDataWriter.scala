@@ -6,6 +6,7 @@ import java.util.Date
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SaveMode, SparkSession}
 import org.apache.spark.sql.types.StructType
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
@@ -18,6 +19,7 @@ import scala.collection.mutable
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 object GenericDataWriter {
+  val log = LoggerFactory.getLogger(this.getClass.getName)
 
   def generateOutputWithSchema(columnNames: Seq[String], rows: RDD[Row],
                                outputPath: String, outputType: String, fileName: String = "",
@@ -36,13 +38,22 @@ object GenericDataWriter {
                              showHeader: Boolean = false): String = {
     val spark = SparkSession.builder().getOrCreate()
     val df = spark.createDataFrame(rows, schema)
+    val size = df.rdd.partitions.size
+    log.info("default output partitionSize=" + size)
+    val outputPartSize = spark.sparkContext.getConf.get("outputPartitionSize", null)
+    val finalDf = if (outputPartSize == null) {
+      df
+    } else {
+      log.info("change output partitionSize to " + outputPartSize)
+      df.repartition(outputPartSize.toInt)
+    }
     val finalPath = if (fileName == null || fileName == "") {
       val inputFormat = new SimpleDateFormat("yyyy-MM-dd_HHmmss")
       outputPath + "/" + inputFormat.format(new Date()) + "." + outputType
     } else {
       outputPath + "/" + fileName + "." + outputType
     }
-    val writer = df.write
+    val writer = finalDf.write
     if (showHeader) {
       writer.option("header", true)
     }
