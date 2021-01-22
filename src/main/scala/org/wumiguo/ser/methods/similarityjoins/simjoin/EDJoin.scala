@@ -169,37 +169,36 @@ object EDJoin {
     //q-gram is order by rare decreasing, the rarest one in the head of the array
     val sortedDocs = CommonEdFunctions.getSortedQgrams2(docs)
     sortedDocs.persist(StorageLevel.MEMORY_AND_DISK)
-    log.info("[EDJoin] sorted docs count " + sortedDocs.count())
+    //log.info("[EDJoin] sorted docs count " + sortedDocs.count()) //low perf
     val ts = Calendar.getInstance().getTimeInMillis
     //output [(tokenId,[strings contain same token])...]
     val prefixIndex = buildPrefixIndex(sortedDocs, qgramLength, threshold)
     prefixIndex.persist(StorageLevel.MEMORY_AND_DISK)
-    val np = prefixIndex.count()
     sortedDocs.unpersist()
     val te = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Number of elements in the index " + np)
-
-    if (!prefixIndex.isEmpty()) {
-      //only use to do the statistics, not a part of the algorithm (n*(n-1)
-      val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
-      val min = a.min()
-      val max = a.max()
-      val cnum = a.sum()
-      val avg = cnum / np
-
-      log.info("[EDJoin] Min number of comparisons " + min)
-      log.info("[EDJoin] Max number of comparisons " + max)
-      log.info("[EDJoin] Avg number of comparisons " + avg)
-      log.info("[EDJoin] Estimated comparisons " + cnum)
-    }
+//    val np = prefixIndex.count()
+//    log.info("[EDJoin] Number of elements in the index " + np)
+//    if (np>0) {
+//      //only use to do the statistics, not a part of the algorithm (n*(n-1)
+//      val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
+//      val min = a.min()
+//      val max = a.max()
+//      val cnum = a.sum()
+//      val avg = cnum / np
+//
+//      log.info("[EDJoin] Min number of comparisons " + min)
+//      log.info("[EDJoin] Max number of comparisons " + max)
+//      log.info("[EDJoin] Avg number of comparisons " + avg)
+//      log.info("[EDJoin] Estimated comparisons " + cnum)
+//    }
     log.info("[EDJoin] EDJOIN index time (s) " + (te - ts) / 1000.0)
 
     val t1 = Calendar.getInstance().getTimeInMillis
     val candidates = getCandidatePairs(prefixIndex, qgramLength, threshold)
-    val nc = candidates.count()
     prefixIndex.unpersist()
     val t2 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Candidates number " + nc)
+    //val nc = candidates.count()
+    //log.info("[EDJoin] Candidates number " + nc)
     log.info("[EDJoin] EDJOIN join time (s) " + (t2 - t1) / 1000.0)
 
     candidates
@@ -207,7 +206,7 @@ object EDJoin {
 
   def getMatches(documents: RDD[(Int, String)], qgramLength: Int, threshold: Int): RDD[(Int, Int, Double)] = {
     val log = LogManager.getRootLogger
-    log.info("[EDJoin] first document " + documents.first())
+    //log.info("[EDJoin] first document " + documents.first())
 
     val t1 = Calendar.getInstance().getTimeInMillis
     val candidates = getCandidates(documents, qgramLength, threshold)
@@ -218,9 +217,9 @@ object EDJoin {
       .filter(_._3 <= threshold)
       .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
-    val nm = m.count()
     val t3 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Num matches " + nm)
+    //val nm = m.count()
+    //log.info("[EDJoin] Num matches " + nm)
     log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
     log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
     m
@@ -261,9 +260,9 @@ object EDJoin {
       .filter(_._3 <= threshold)
       .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
-    val nm = m.count()
+    //val nm = m.count()
+    //log.info("[EDJoin] Num matches " + nm)
     val t3 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Num matches " + nm)
     log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
     log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
     m

@@ -277,11 +277,26 @@ object EDBatchJoin {
     //output [(tokenId,[strings contain same token])...]
     val prefixIndex = buildPrefixIndex(sortedDocs, qgramLength, threshold)
     prefixIndex.persist(StorageLevel.MEMORY_AND_DISK)
-    val np = prefixIndex.count()
     sortedDocs.unpersist()
     val te = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Number of elements in the index " + np)
+    // perfDebug(prefixIndex)
+    log.info("[EDJoin] EDJOIN index time (s) " + (te - ts) / 1000.0)
 
+    val t1 = Calendar.getInstance().getTimeInMillis
+    val candidates = getCandidatePairs(prefixIndex, qgramLength, threshold)
+    // val nc = candidates.count()
+    prefixIndex.unpersist()
+    val t2 = Calendar.getInstance().getTimeInMillis
+    // log.info("[EDJoin] Candidates number " + nc)
+    log.info("[EDJoin] EDJOIN join time (s) " + (t2 - t1) / 1000.0)
+
+    candidates
+  }
+
+
+  private def perfDebug(prefixIndex: RDD[(Int, Array[(Int, Int, Array[(Int, Int)], String)])]) = {
+    val np = prefixIndex.count()
+    log.info("[EDJoin] Number of elements in the index " + np)
     if (!prefixIndex.isEmpty()) {
       //only use to do the statistics, not a part of the algorithm
       val a = prefixIndex.map(x => x._2.length.toDouble * (x._2.length - 1))
@@ -295,19 +310,7 @@ object EDBatchJoin {
       log.info("[EDJoin] Avg number of comparisons " + avg)
       log.info("[EDJoin] Estimated comparisons " + cnum)
     }
-    log.info("[EDJoin] EDJOIN index time (s) " + (te - ts) / 1000.0)
-
-    val t1 = Calendar.getInstance().getTimeInMillis
-    val candidates = getCandidatePairs(prefixIndex, qgramLength, threshold)
-    val nc = candidates.count()
-    prefixIndex.unpersist()
-    val t2 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Candidates number " + nc)
-    log.info("[EDJoin] EDJOIN join time (s) " + (t2 - t1) / 1000.0)
-
-    candidates
   }
-
 
   def getCandidates(documents: RDD[(Int, Array[String])], qgramLength: Int, threshold: Int): RDD[(Int, ((Int, String), (Int, String)))] = {
     //Transforms the documents into n-grams
@@ -330,7 +333,7 @@ object EDBatchJoin {
     //output [(tokenId,[strings contain same token])...]
     val prefixIndex = buildPrefixIndexV3(sortedDocs, qgramLength, threshold)
     prefixIndex.persist(StorageLevel.MEMORY_AND_DISK)
-     sortedDocs.unpersist()
+    sortedDocs.unpersist()
     val te = Calendar.getInstance().getTimeInMillis
     // statisticsOnCandidate(prefixIndex)
     log.info("[EDJoin] EDJOIN index time (s) " + (te - ts) / 1000.0)
@@ -374,9 +377,9 @@ object EDBatchJoin {
       .filter(_._3 <= threshold)
       .map { case ((d1Id, d1), (d2Id, d2), ed) => (d1Id, d2Id, ed.toDouble) }
     m.persist(StorageLevel.MEMORY_AND_DISK)
-    val nm = m.count()
+    // val nm = m.count()
     val t3 = Calendar.getInstance().getTimeInMillis
-    log.info("[EDJoin] Num matches " + nm)
+    //log.info("[EDJoin] Num matches " + nm)
     log.info("[EDJoin] Verify time (s) " + (t3 - t2) / 1000.0)
     log.info("[EDJoin] Global time (s) " + (t3 - t1) / 1000.0)
     m

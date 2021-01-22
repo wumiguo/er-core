@@ -50,11 +50,12 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
     val numberOfProfile1 = profiles1.count()
     val secondEPStartID = numberOfProfile1.intValue()
     log.info("profiles1 count=" + numberOfProfile1)
+    preCheckOnProfile(numberOfProfile1)
 
     val profiles2: RDD[Profile] = loadDataInOneGo(dataSet2, secondEPStartID, 1)
-    log.info("profiles2 count=" + profiles2.count())
-    preCheckOnProfile(profiles1)
-    preCheckOnProfile(profiles2)
+    val numberOfProfile2 = profiles2.count()
+    log.info("profiles2 count=" + numberOfProfile2)
+    preCheckOnProfile(numberOfProfile2)
 
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
@@ -78,7 +79,9 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
     //log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val (columnNames, rows) = ERResultRender.renderResultWithPreloadProfilesAndSimilarityPairs(
       dataSet1, dataSet2,
-      secondEPStartID, matchDetails, profiles, matchedPairs, showSim, profiles1, profiles2)
+      secondEPStartID, profiles, matchedPairs, showSim, profiles1, profiles2)
+    val t5 = Calendar.getInstance().getTimeInMillis
+    log.info("Render time(s) " + (t5 - t4) / 1000.0)
     val overwrite = overwriteOnExist.toBoolean
     val finalPath = generateOutputWithSchema(columnNames, rows, outputPath, outputType, joinResultFile, overwrite)
     log.info("save mapping into path " + finalPath)
@@ -127,6 +130,7 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
 
   def doJoin(flowOptions: Map[String, String], fieldPairNumber: Int, attributeArrayPair: (RDD[(Int, Array[String])], RDD[(Int, Array[String])]),
              weighted: Boolean, weights: List[Double]) = {
+    val t1 = Calendar.getInstance().getTimeInMillis
     val q = flowOptions.get("q").getOrElse("2")
     val algorithm = flowOptions.get("algorithm").getOrElse(ALGORITHM_EDJOIN)
     val threshold = flowOptions.get("threshold").getOrElse("2")
@@ -136,12 +140,14 @@ object SchemaBasedBatchV2SimJoinECPreloadFlow extends ERFlow with SparkEnvSetup 
       algorithm match {
         case ALGORITHM_EDJOIN =>
           val attributes = pair._1.union(pair._2)
-          EDBatchJoin.getMatchesV2(attributes, q.toInt, fieldPairNumber, threshold.toInt, weighted, weights.zipWithIndex.map(_.swap).toMap)
-        case _ => throw new RuntimeException("Unsupported algo " + algorithm)
+          EDBatchJoin.getMatchesV2(attributes, fieldPairNumber, q.toInt, threshold.toInt, weighted, weights.zipWithIndex.map(_.swap).toMap)
+        case _ => throw new RuntimeException("Unsupported algorithem " + algorithm)
       }
     }
 
     val attributesMatches: RDD[(Int, Int, Double)] = getMatches(attributeArrayPair)
+    val t2 = Calendar.getInstance().getTimeInMillis
+    log.info("Finish matches time(s) " + (t2 - t1) / 1000.0)
     attributesMatches
   }
 }

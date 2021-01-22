@@ -51,11 +51,12 @@ object SchemaBasedBatchV2SimJoinECFlow extends ERFlow with SparkEnvSetup with Si
     val numberOfProfile1 = profiles1.count()
     val secondEPStartID = numberOfProfile1.intValue()
     log.info("profiles1 count=" + numberOfProfile1)
+    preCheckOnProfile(numberOfProfile1)
 
     val profiles2: RDD[Profile] = loadDataWithGivenOptionOnly(dataSet2, secondEPStartID, 1)
-    log.info("profiles2 count=" + profiles2.count())
-    preCheckOnProfile(profiles1)
-    preCheckOnProfile(profiles2)
+    val numberOfProfile2 = profiles2.count()
+    log.info("profiles2 count=" + numberOfProfile2)
+    preCheckOnProfile(numberOfProfile2)
 
     log.info("profiles1 first=" + profiles1.first())
     log.info("profiles2 first=" + profiles2.first())

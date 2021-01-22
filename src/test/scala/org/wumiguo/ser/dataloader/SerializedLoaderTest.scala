@@ -9,7 +9,7 @@ import org.wumiguo.ser.testutil.TestDirs
  *         (Change file header on Settings -> Editor -> File and Code Templates)
  */
 class SerializedLoaderTest extends FlatSpec {
-  it should "all good to load good serialized data" in {
+  ignore should "all good to load good serialized data" in {
     val gtFile = TestDirs.resolveDataPath("/serialized/dblpVsAcmGt-IdDuplicateSet")
     val data = SerializedLoader.loadSerializedGroundtruth(gtFile)
     assert(data != null)

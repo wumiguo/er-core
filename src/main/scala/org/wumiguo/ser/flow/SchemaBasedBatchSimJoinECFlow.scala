@@ -52,11 +52,12 @@ object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJ
     val numberOfProfile1 = profiles1.count()
     val secondEPStartID = numberOfProfile1.intValue()
     log.info("profiles1 count=" + numberOfProfile1)
+    preCheckOnProfile(numberOfProfile1)
 
     val profiles2: RDD[Profile] = loadDataWithGivenOptionOnly(dataSet2, secondEPStartID, 1)
-    log.info("profiles2 count=" + profiles2.count())
-    preCheckOnProfile(profiles1)
-    preCheckOnProfile(profiles2)
+    val numberOfProfile2 = profiles2.count()
+    log.info("profiles2 count=" + numberOfProfile2)
+    preCheckOnProfile(numberOfProfile2)
 
     val flowOptions = FlowOptions.getOptions(args)
     log.info("flowOptions=" + flowOptions)
@@ -66,13 +67,13 @@ object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJ
     val t2 = Calendar.getInstance().getTimeInMillis
 
     log.info("[SSJoin] Global join+verification time (s) " + (t2 - t1) / 1000.0)
-    val nm = matchDetails.count()
-    log.info("[SSJoin] Number of matches " + nm)
+    //val nm = matchDetails.count()
+    //log.info("[SSJoin] Number of matches " + nm)
     val t3 = Calendar.getInstance().getTimeInMillis
     log.info("[SSJoin] Intersection time (s) " + (t3 - t2) / 1000.0)
-    if (nm > 0) {
-      log.info("[SSJoin] First matches " + matchDetails.first())
-    }
+    //    if (nm > 0) {
+    //      log.info("[SSJoin] First matches " + matchDetails.first())
+    //    }
     val profiles = profiles1.union(profiles2)
     val clusters = ConnectedComponentsClustering.getClusters(profiles,
       matchDetails.map(x => WeightedEdge(x._1, x._2, x._3)), maxProfileID = 0, edgesThreshold = 0.0)
@@ -96,10 +97,6 @@ object SchemaBasedBatchSimJoinECFlow extends ERFlow with SparkEnvSetup with SimJ
       }
       pairs
     })
-    if (!matchedPairs.isEmpty()) {
-      matchDetails.take(3).foreach(x => log.info("matchDetails=" + x))
-      matchedPairs.take(3).foreach(x => log.info("matchedPair=" + x))
-    }
     log.info("matchedPairsCount=" + matchedPairs.count() + ",matchDetails=" + matchDetails.count())
     val showSim = showSimilarity.toBoolean
     val (columnNames, rows) = ERResultRender.renderResult(dataSet1, dataSet2,

@@ -42,12 +42,12 @@ trait SimJoinCommonTrait {
     log.info("dataSet1Attr=" + dataSet1.joinAttrs.toList + " vs dataSet2Attr=" + dataSet2.joinAttrs.toList)
     val attributes1 = CommonFunctions.extractFieldArray(profiles1, dataSet1.joinAttrs.toArray)
     val attributes2 = CommonFunctions.extractFieldArray(profiles2, dataSet2.joinAttrs.toArray)
-    if (!attributes1.isEmpty()) {
-      attributes1.take(3).foreach(x => log.info("dataSet1=" + x._1 + " " + x._2.toSeq))
-    }
-    if (!attributes2.isEmpty()) {
-      attributes2.take(3).foreach(x => log.info("dataSet2=" + x._1 + " " + x._2.toSeq))
-    }
+    //    if (!attributes1.isEmpty()) {
+    //      attributes1.take(3).foreach(x => log.info("dataSet1=" + x._1 + " " + x._2.toSeq))
+    //    }
+    //    if (!attributes2.isEmpty()) {
+    //      attributes2.take(3).foreach(x => log.info("dataSet2=" + x._1 + " " + x._2.toSeq))
+    //    }
     val attributesArray = (attributes1, attributes2)
     attributesArray
   }

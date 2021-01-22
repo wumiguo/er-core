@@ -5,7 +5,7 @@ import org.wumiguo.ser.common.ProfilesListComparison._
 import org.wumiguo.ser.common.SparkEnvSetup
 import org.wumiguo.ser.dataloader.{DataTypeResolver, ProfileLoaderFactory}
 import org.wumiguo.ser.methods.datastructure.{KeyValue, Profile}
-import org.wumiguo.ser.testutil.TestDirs
+import org.wumiguo.ser.testutil.{CollectionsComparision, TestDirs}
 
 import scala.collection.mutable
 import scala.reflect.io.File
@@ -161,7 +161,7 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
         KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001312"), KeyValue("P1-t_pid", "PG10091"), KeyValue("P2-ID", "PG10091")), "", 0),
       Profile(0, mutable.MutableList(
         KeyValue("Similarity", "0.8333333333333334"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"), KeyValue("P2-ID", "PU1001")), "", 0)
-    ),items.map(p => {
+    ), items.map(p => {
       Profile(0, p.attributes, p.originalID, p.sourceId)
     })))
   }
@@ -382,7 +382,7 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
     assertResult(true)(outputFile.exists)
     val out = ProfileLoaderFactory.getDataLoader(DataTypeResolver.getDataType(outputPath)).load(outputPath)
     val items = out.collect.toList
-    assert(sameIgnoreOrder(items.map(p => {
+    CollectionsComparision.sameIgnoreOrder(items.map(p => {
       Profile(0, p.attributes, p.originalID, p.sourceId)
     }), List(
       Profile(0, mutable.MutableList(
@@ -391,7 +391,6 @@ class ERFlowLauncherTest extends AnyFlatSpec with SparkEnvSetup {
       Profile(0, mutable.MutableList(
         KeyValue("Similarity", "1.0"), KeyValue("P1-ID", "TCN001278"), KeyValue("P1-t_pid", "U1001"),
         KeyValue("P1-system_id", "TENCGG"), KeyValue("P2-ID", "PU1001"), KeyValue("P2-p_name", "FinTechETF")), "", 0)
-    )
     ))
   }
   it should "call ERFlowLauncher SSJoinPosL v2" in {
